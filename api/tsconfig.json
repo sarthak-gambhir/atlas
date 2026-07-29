@@ -1,0 +1,10 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023"],
+    "types": ["node"]
+  },
+  // The server's Fastify augmentations (`app.db`, `request.user`) are declaration
+  // only, so they have to be named here as well as in the server's own project.
+  "include": [".", "../apps/server/src/fastify.d.ts"]
+}

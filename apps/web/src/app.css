@@ -1,0 +1,92 @@
+/*
+ * The few app-shell rules that component props and inline styles cannot express:
+ * pseudo-classes and sticky layering. Everything else stays in Duality tokens.
+ */
+
+@font-face {
+  font-family: 'Reddit Mono';
+  src: url('/fonts/RedditMono.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Reskin the whole app to Reddit Mono. Loaded after Duality's stylesheet, so
+ * these override its default sans/mono font tokens everywhere they are used. */
+:root {
+  --font-sans: 'Reddit Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-mono: 'Reddit Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* Kill the default body margin that caused the stray scrollbar and gutter. */
+body {
+  margin: 0;
+}
+
+/* A viewport-relative height (not 100%) so the shell fills the screen without
+ * depending on ancestor heights — ThemeProvider/ToastProvider wrap the app in
+ * plain divs that have no height, which would otherwise collapse a percentage
+ * chain to content height. A definite height here also lets .atlas-main own the
+ * scroll. dvh accounts for mobile browser chrome; vh is the fallback. */
+.atlas-shell {
+  height: 100vh;
+  height: 100dvh;
+  /* Shared height for the top bar and the sidebar header so their bottom
+   * borders line up across the seam. */
+  --atlas-topbar-h: 3.5rem;
+}
+
+/* Match the sidebar header's height and vertically center the top-bar row so
+ * the two header strips read as one continuous band. */
+.atlas-header,
+.du_sidebar_header {
+  min-block-size: var(--atlas-topbar-h);
+}
+
+.atlas-header {
+  display: flex;
+  align-items: center;
+}
+
+.atlas-header-row {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Account popover action rows: full width, left-aligned like a menu item. */
+.atlas-account-item {
+  justify-content: flex-start;
+  inline-size: 100%;
+}
+
+/* The main region is the only scroll container, so the sidebar and header
+ * stay put while content pans. */
+.atlas-main {
+  overflow-y: auto;
+}
+
+/* Pinned above the scrolling content but below Duality overlays (--z-popover is 900). */
+.atlas-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bg);
+  border-block-end: var(--border-width) solid var(--fg);
+}
+
+/* Off-screen until focused by the keyboard, then parked over the header. */
+.atlas-skip-link {
+  position: fixed;
+  top: var(--space-2);
+  inset-inline-start: var(--space-2);
+  z-index: 20;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg);
+  color: var(--fg);
+  border: var(--border-width) solid var(--fg);
+  transform: translateY(-200%);
+}
+
+.atlas-skip-link:focus {
+  transform: translateY(0);
+}

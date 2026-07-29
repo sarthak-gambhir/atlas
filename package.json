@@ -1,0 +1,50 @@
+{
+  "name": "atlas",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Minimal task planning and prioritization app",
+  "engines": {
+    "node": "24.x"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,web -c blue,magenta \"npm:dev:server\" \"npm:dev:web\"",
+    "dev:server": "node --watch --env-file-if-exists=.env apps/server/src/dev.ts",
+    "dev:web": "npm --workspace @atlas/web run dev",
+    "create-user": "node --env-file-if-exists=.env apps/server/src/scripts/create-user.ts",
+    "db:generate": "npm --workspace @atlas/server run db:generate",
+    "db:migrate": "npm --workspace @atlas/server run db:migrate",
+    "build": "npm --workspace @atlas/web run build",
+    "vercel-build": "npm run db:migrate && npm run build",
+    "typecheck": "npm --workspace @atlas/shared run typecheck && npm --workspace @atlas/server run typecheck && npm --workspace @atlas/web run typecheck && tsc -p api --noEmit && tsc -p e2e --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:report": "playwright show-report",
+    "verify": "npm run typecheck && npm run lint && npm run test"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
+    "@eslint/js": "^9.39.5",
+    "@playwright/test": "^1.62.0",
+    "@types/node": "^26.1.2",
+    "concurrently": "^10.0.4",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.8.0",
+    "prettier": "^3.9.6",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.65.0",
+    "vitest": "^4.1.10"
+  }
+}

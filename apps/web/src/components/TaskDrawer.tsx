@@ -29,6 +29,7 @@ import {
 } from '@atlas/shared';
 import { useState } from 'react';
 
+import { BucketBadge } from './BucketBadge.tsx';
 import { formatIsoDate, parseIsoDate, todayIso } from '../lib/dates.ts';
 import { CONFIDENCE_LABELS, STATUS_LABELS } from '../lib/labels.ts';
 import { useProjects, useUsers } from '../lib/organization.ts';
@@ -111,7 +112,7 @@ export function TaskDrawer({ task, onClose }: TaskDrawerProps) {
           </Heading>
           <Inline gap={2} align="center">
             <Badge variant="solid">{preview}</Badge>
-            <Badge variant="outline">{bucketFor(preview, scoring.thresholds)}</Badge>
+            <BucketBadge bucket={bucketFor(preview, scoring.thresholds)} />
           </Inline>
         </Inline>
       </DrawerHeader>

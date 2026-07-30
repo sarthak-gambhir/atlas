@@ -14,6 +14,7 @@ import {
 import type { TaskDto } from '@atlas/shared';
 import { useMemo, useState } from 'react';
 
+import { BucketBadge } from '../components/BucketBadge.tsx';
 import { BulkActionBar } from '../components/BulkActionBar.tsx';
 import { FilterBar } from '../components/FilterBar.tsx';
 import { PageHeader } from '../components/PageHeader.tsx';
@@ -75,7 +76,7 @@ export function BacklogPage() {
         header: 'Priority',
         value: (task) => task.bucket,
         sortable: true,
-        cell: (task) => <Badge variant="outline">{task.bucket}</Badge>,
+        cell: (task) => <BucketBadge bucket={task.bucket} />,
       },
       {
         id: 'due',

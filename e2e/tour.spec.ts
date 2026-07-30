@@ -12,7 +12,7 @@ const routes = [
   { path: '/board', name: 'board', heading: 'Board', ready: 'Fix checkout crash on Safari' },
   { path: '/matrix', name: 'matrix', heading: 'Matrix', ready: 'Impact / Effort' },
   { path: '/projects', name: 'projects', heading: 'Projects', ready: 'Website relaunch' },
-  { path: '/settings', name: 'settings', heading: 'Scoring', ready: 'Bucket thresholds' },
+  { path: '/settings', name: 'settings', heading: 'Settings', ready: 'Bucket thresholds' },
 ] as const;
 
 function screenshotPath(testInfo: TestInfo, name: string): string {

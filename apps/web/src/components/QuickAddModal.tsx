@@ -19,6 +19,7 @@ import {
 import { bucketFor, computeScore } from '@atlas/shared';
 import { useState, type FormEvent } from 'react';
 
+import { BucketBadge } from './BucketBadge.tsx';
 import { formatIsoDate, parseIsoDate, todayIso } from '../lib/dates.ts';
 import { useProjects } from '../lib/organization.ts';
 import { useCreateTask, useScoringSettings } from '../lib/tasks.ts';
@@ -82,7 +83,7 @@ export function QuickAddModal({ isOpen, onClose }: QuickAddModalProps) {
             </Heading>
             <Inline gap={2} align="center">
               <Badge variant="solid">{preview}</Badge>
-              <Badge variant="outline">{bucketFor(preview, scoring.thresholds)}</Badge>
+              <BucketBadge bucket={bucketFor(preview, scoring.thresholds)} />
             </Inline>
           </Inline>
         </ModalHeader>

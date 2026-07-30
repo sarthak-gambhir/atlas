@@ -4,8 +4,8 @@
  * can never drift out of date as a due date approaches.
  */
 
-/** Allowed confidence multipliers: low, medium, high. */
-export const CONFIDENCE_VALUES = [0.5, 0.8, 1] as const;
+/** Allowed confidence multipliers: none, low, medium, high. */
+export const CONFIDENCE_VALUES = [0, 0.5, 0.8, 1] as const;
 export type Confidence = (typeof CONFIDENCE_VALUES)[number];
 
 /** Narrows an arbitrary number (from a form or the database) to a valid multiplier. */

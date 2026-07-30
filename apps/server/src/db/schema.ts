@@ -99,7 +99,7 @@ export const tasks = pgTable(
     index('tasks_due_idx').on(t.dueDate),
     check('tasks_impact_range', sql`${t.impact} between 1 and 5`),
     check('tasks_effort_range', sql`${t.effort} between 1 and 5`),
-    check('tasks_confidence_values', sql`${t.confidence} in (0.5, 0.8, 1.0)`),
+    check('tasks_confidence_values', sql`${t.confidence} in (0, 0.5, 0.8, 1.0)`),
     check(
       'tasks_urgency_override_range',
       sql`${t.urgencyOverride} is null or ${t.urgencyOverride} between 1 and 5`,

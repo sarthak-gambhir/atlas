@@ -235,7 +235,8 @@ function ScoringForm({ saved, canEdit }: { saved: ScoringSettings; canEdit: bool
             Bucket thresholds
           </Heading>
           <Text size="sm">
-            A task lands in the highest bucket whose minimum score it meets. Each minimum is capped
+            A bucket threshold is the minimum score a task must have to land in that bucket. A task
+            will kept in the highest bucket whose minimum score it meets. Each threshold is capped
             by its neighbour, so the buckets always stay in order.
           </Text>
 
@@ -301,8 +302,8 @@ function BucketThresholdEditor({
   return (
     <Card>
       <CardBody>
-        <Heading level={3} visualLevel={4}>
-          Set bucket thresholds
+        <Heading level={4} visualLevel={5}>
+          Set bucket minimum scores
         </Heading>
         <Stack gap={4}>
           <Box
@@ -313,6 +314,8 @@ function BucketThresholdEditor({
               rowGap: '0.75rem',
               alignItems: 'center',
             }}
+            paddingX={2}
+            paddingY={4}
           >
             <Text size="sm" weight="bold">
               Bucket
@@ -323,8 +326,9 @@ function BucketThresholdEditor({
 
             {rows.map(({ bucket, value, min, max }) => (
               <Fragment key={bucket}>
-                <BucketBadge bucket={bucket} />
+                <BucketBadge bucket={bucket} size="lg" />
                 <NumberInput
+                  size="lg"
                   aria-label={`${BUCKET_LABELS[bucket]} minimum score`}
                   value={value}
                   min={min}
@@ -336,8 +340,10 @@ function BucketThresholdEditor({
               </Fragment>
             ))}
 
-            <BucketBadge bucket="someday" />
-            <Text size="sm">no minimum</Text>
+            <BucketBadge bucket="someday" size="lg" />
+            <Text size="sm" weight="bold">
+              -- No Minimum Score --
+            </Text>
           </Box>
 
           <Divider />

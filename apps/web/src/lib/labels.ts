@@ -26,11 +26,13 @@ export const BUCKET_LABELS: Record<PriorityBucket, string> = {
   someday: 'Someday',
 };
 
-// The two-color model has no accent palette, so priority is conveyed by weight:
-// the top buckets are filled, the lower ones are outlined.
+// The two-color model has no accent palette, so priority is conveyed by weight.
+// Only `now` is filled (loudest); the rest are outlined and set apart by their
+// border style (see the `.bucket-badge-*` rules in app.css): solid, then
+// dashed, then dotted as priority falls.
 export const BUCKET_BADGE_VARIANT: Record<PriorityBucket, 'solid' | 'outline'> = {
   now: 'solid',
-  next: 'solid',
+  next: 'outline',
   later: 'outline',
   someday: 'outline',
 };

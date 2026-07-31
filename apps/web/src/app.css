@@ -90,3 +90,20 @@ body {
 .atlas-skip-link:focus {
   transform: translateY(0);
 }
+
+/* Priority buckets in a two-color theme: `now` stays filled (loudest) while the
+ * outlined buckets step down through solid, dashed, and dotted borders. The
+ * compound selector keeps these above Duality's base `.du_badge` border. */
+.du_badge.bucket-badge-next {
+  border-style: double;
+  border-width: 5px;
+  padding: 0 var(--space-3) 0 calc(var(--space-3) - 3px);
+}
+
+.du_badge.bucket-badge-later {
+  border-style: solid;
+}
+
+.du_badge.bucket-badge-someday {
+  border-style: dotted;
+}

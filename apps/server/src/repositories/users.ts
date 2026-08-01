@@ -2,7 +2,7 @@ import type { UserRole } from '@atlas/shared';
 import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 
 import type { Database } from '../db/index.ts';
-import { users } from '../db/schema.ts';
+import { tasks, users } from '../db/schema.ts';
 
 export interface UserRecord {
   id: string;
@@ -93,6 +93,7 @@ export async function countActiveAdmins(db: Database): Promise<number> {
 }
 
 export interface UserPatch {
+  username?: string;
   displayName?: string;
   role?: UserRole;
   disabled?: boolean;
@@ -106,6 +107,7 @@ export async function updateUser(
 ): Promise<UserRecord | undefined> {
   const values: Partial<typeof users.$inferInsert> = { updatedAt: new Date() };
 
+  if (patch.username !== undefined) values.username = patch.username.trim();
   if (patch.displayName !== undefined) values.displayName = patch.displayName;
   if (patch.role !== undefined) values.role = patch.role;
   if (patch.disabled !== undefined) values.disabledAt = patch.disabled ? new Date() : null;
@@ -113,4 +115,21 @@ export async function updateUser(
 
   const [row] = await db.update(users).set(values).where(eq(users.id, id)).returning();
   return row ? toUserRecord(row) : undefined;
+}
+
+/**
+ * Permanently removes a user. `tasks.assignee_id` (ON DELETE set null) and
+ * `sessions.user_id` (cascade) resolve themselves, but `tasks.created_by` is
+ * NOT NULL, so those tasks are handed to the acting admin first.
+ */
+export async function deleteUser(
+  db: Database,
+  id: string,
+  reassignCreatedByTo: string,
+): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    await tx.update(tasks).set({ createdBy: reassignCreatedByTo }).where(eq(tasks.createdBy, id));
+    const rows = await tx.delete(users).where(eq(users.id, id)).returning({ id: users.id });
+    return rows.length > 0;
+  });
 }

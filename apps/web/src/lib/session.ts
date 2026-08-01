@@ -1,4 +1,4 @@
-import type { LoginInput, SessionUser } from '@atlas/shared';
+import type { LoginInput, SessionUser, UpdateProfileInput } from '@atlas/shared';
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 
 import { ApiError, api } from './api.ts';
@@ -31,6 +31,42 @@ export function useLogin() {
     onSuccess: ({ user }) => {
       queryClient.setQueryData(sessionKey, user);
     },
+  });
+}
+
+export function useUpdateProfile() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: UpdateProfileInput) =>
+      api.patch<{ user: SessionUser }>('/auth/me', input),
+    onSuccess: ({ user }) => {
+      queryClient.setQueryData(sessionKey, user);
+    },
+  });
+}
+
+/**
+ * Live availability probe for the profile editor. Only runs when `enabled`, so
+ * callers can gate it on a valid, changed, debounced username. Pass the id of
+ * the account being edited so its own current name is treated as available.
+ */
+export function useUsernameAvailability(username: string, enabled: boolean, excludeUserId?: string) {
+  return useQuery({
+    queryKey: ['username-available', username.toLowerCase(), excludeUserId ?? 'self'],
+    queryFn: () => {
+      const params = new URLSearchParams({ username });
+      if (excludeUserId) params.set('excludeUserId', excludeUserId);
+      return api.get<{ available: boolean }>(`/auth/username-available?${params.toString()}`);
+    },
+    enabled,
+    staleTime: 30 * 1000,
+  });
+}
+
+export function useSignOutOtherDevices() {
+  return useMutation({
+    mutationFn: () => api.post<{ ok: true }>('/auth/logout-others'),
   });
 }
 

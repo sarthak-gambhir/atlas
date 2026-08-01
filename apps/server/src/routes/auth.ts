@@ -1,4 +1,10 @@
-import { changePasswordSchema, loginInputSchema, type SessionUser } from '@atlas/shared';
+import {
+  changePasswordSchema,
+  loginInputSchema,
+  updateProfileSchema,
+  usernameAvailabilityQuerySchema,
+  type SessionUser,
+} from '@atlas/shared';
 import type { FastifyPluginAsync, FastifyReply } from 'fastify';
 
 import { requireAuth } from '../auth/context.ts';
@@ -91,6 +97,52 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     // requireAuth guarantees a user; the non-null assertion keeps the type honest.
     user: toSessionUser(request.user!),
   }));
+
+  /**
+   * Availability probe for the profile editor. A username is "available" when
+   * nobody else holds it (case-insensitively); the caller's own current name
+   * always counts as free so re-casing or re-saving is not blocked.
+   */
+  app.get('/auth/username-available', { preHandler: requireAuth }, async (request) => {
+    const parsed = usernameAvailabilityQuerySchema.safeParse(request.query);
+    if (!parsed.success) return { available: false };
+
+    const me = request.user!;
+    // Only an admin may vouch for another account; everyone else is scoped to self.
+    const exclude =
+      parsed.data.excludeUserId && (me.role === 'admin' || parsed.data.excludeUserId === me.id)
+        ? parsed.data.excludeUserId
+        : me.id;
+
+    const existing = await findUserByUsername(app.db, parsed.data.username);
+    return { available: !existing || existing.id === exclude };
+  });
+
+  app.patch('/auth/me', { preHandler: requireAuth }, async (request, reply) => {
+    const { displayName, username } = updateProfileSchema.parse(request.body);
+    const me = request.user!;
+
+    // Guard the case-insensitive unique index before touching the row.
+    const clash = await findUserByUsername(app.db, username);
+    if (clash && clash.id !== me.id) {
+      return reply.code(409).send({ error: 'already_exists', message: 'That username is taken.' });
+    }
+
+    const updated = await updateUser(app.db, me.id, { displayName, username });
+
+    if (!updated) {
+      return reply.code(404).send({ error: 'not_found', message: 'Account no longer exists.' });
+    }
+
+    return { user: toSessionUser(updated) };
+  });
+
+  app.post('/auth/logout-others', { preHandler: requireAuth }, async (request) => {
+    if (request.sessionToken) {
+      await revokeOtherSessionsForUser(app.db, request.user!.id, request.sessionToken);
+    }
+    return { ok: true as const };
+  });
 
   app.post('/auth/password', { preHandler: requireAuth }, async (request, reply) => {
     const { currentPassword, newPassword } = changePasswordSchema.parse(request.body);

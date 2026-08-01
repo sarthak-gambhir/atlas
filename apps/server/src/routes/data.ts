@@ -17,7 +17,7 @@ export const dataRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.post('/import', { preHandler: requireAdmin }, async (request) => {
-    const { mode, bundle } = importRequestSchema.parse(request.body);
-    return { result: await restoreBackup(app.db, bundle, mode, request.user!.id) };
+    const { mode, bundle, assigneeMap } = importRequestSchema.parse(request.body);
+    return { result: await restoreBackup(app.db, bundle, mode, request.user!.id, assigneeMap) };
   });
 };

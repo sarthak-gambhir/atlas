@@ -64,14 +64,16 @@ export async function buildBackup(db: Database): Promise<BackupBundle> {
 /**
  * Restores a bundle. Projects, tags and assignees are matched by name, so a
  * bundle can be imported into a database whose ids differ. People are never
- * created: a task assigned to someone unknown here arrives unassigned, and the
- * caller is told which names were dropped.
+ * created: a task assigned to someone unknown here arrives unassigned unless
+ * the caller supplies an `assigneeMap` pointing that name at an existing user.
+ * Whatever remains unmatched is reported back so the caller knows what dropped.
  */
 export async function restoreBackup(
   db: Database,
   bundle: BackupBundle,
   mode: 'merge' | 'replace',
   importerId: string,
+  assigneeMap: Record<string, string> = {},
 ): Promise<ImportResultDto> {
   const result: ImportResultDto = {
     projectsCreated: 0,
@@ -89,8 +91,22 @@ export async function restoreBackup(
       ? await db.select({ id: users.id, username: users.username }).from(users)
       : [];
   const userByName = new Map(knownUsers.map((user) => [user.username.toLowerCase(), user.id]));
+  const validUserIds = new Set(knownUsers.map((user) => user.id));
 
-  const missing = [...usernames].filter((name) => !userByName.has(name));
+  // A name that has no direct match may still be remapped onto a real user.
+  const remapped = new Map<string, string>();
+  for (const [name, targetId] of Object.entries(assigneeMap)) {
+    const key = name.toLowerCase();
+    if (!userByName.has(key) && validUserIds.has(targetId)) remapped.set(key, targetId);
+  }
+
+  const resolveAssignee = (name: string | null | undefined): string | undefined => {
+    if (name == null) return undefined;
+    const key = name.toLowerCase();
+    return userByName.get(key) ?? remapped.get(key);
+  };
+
+  const missing = [...usernames].filter((name) => resolveAssignee(name) == null);
   result.unknownAssignees = missing.sort();
 
   await db.transaction(async (tx) => {
@@ -133,7 +149,7 @@ export async function restoreBackup(
     for (const task of bundle.tasks) {
       const taskId = crypto.randomUUID();
       const projectId = task.project ? projectByName.get(task.project.toLowerCase()) : undefined;
-      const assigneeId = task.assignee ? userByName.get(task.assignee.toLowerCase()) : undefined;
+      const assigneeId = resolveAssignee(task.assignee);
       const createdAt = task.createdAt != null ? new Date(task.createdAt) : new Date();
 
       await tx.insert(tasks).values({

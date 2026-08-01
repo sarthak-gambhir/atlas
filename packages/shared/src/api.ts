@@ -143,15 +143,18 @@ export interface UserSummaryDto {
   displayName: string;
   role: (typeof USER_ROLES)[number];
   disabled: boolean;
+  createdAt: string;
 }
 
+export const usernameSchema = z
+  .string()
+  .trim()
+  .min(3)
+  .max(50)
+  .regex(/^[A-Za-z0-9._-]+$/, 'Letters, numbers, dot, dash and underscore only');
+
 export const createUserSchema = z.object({
-  username: z
-    .string()
-    .trim()
-    .min(3)
-    .max(50)
-    .regex(/^[A-Za-z0-9._-]+$/, 'Letters, numbers, dot, dash and underscore only'),
+  username: usernameSchema,
   displayName: z.string().trim().min(1).max(100),
   password: z.string().min(8).max(1024),
   role: z.enum(USER_ROLES).optional(),
@@ -159,6 +162,7 @@ export const createUserSchema = z.object({
 export type CreateUserInput = z.infer<typeof createUserSchema>;
 
 export const updateUserSchema = z.object({
+  username: usernameSchema.optional(),
   displayName: z.string().trim().min(1).max(100).optional(),
   role: z.enum(USER_ROLES).optional(),
   disabled: z.boolean().optional(),
@@ -172,6 +176,18 @@ export const changePasswordSchema = z.object({
   newPassword: z.string().min(8).max(1024),
 });
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+
+export const updateProfileSchema = z.object({
+  displayName: z.string().trim().min(1).max(100),
+  username: usernameSchema,
+});
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+
+export const usernameAvailabilityQuerySchema = z.object({
+  username: usernameSchema,
+  /** Id of the account being edited, whose own current name counts as free. */
+  excludeUserId: z.uuid().optional(),
+});
 
 /**
  * A portable snapshot. Projects, tags and people are referenced by name rather
@@ -215,6 +231,12 @@ export const importRequestSchema = z.object({
   /** `replace` clears existing tasks and projects first; `merge` adds to them. */
   mode: z.enum(['merge', 'replace']).default('merge'),
   bundle: backupBundleSchema,
+  /**
+   * Remaps assignees that do not exist here. Keys are bundle usernames
+   * (lower-cased), values are the id of an existing user to assign instead.
+   * Anything omitted falls back to unassigned.
+   */
+  assigneeMap: z.record(z.string(), z.uuid()).optional(),
 });
 export type ImportRequest = z.infer<typeof importRequestSchema>;
 

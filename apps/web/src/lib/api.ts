@@ -28,10 +28,15 @@ async function toApiError(response: Response): Promise<ApiError> {
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  // Only advertise a JSON body when we actually send one: Fastify rejects an
+  // empty body when the content-type is `application/json` (e.g. bare DELETEs).
+  const headers = new Headers(init.headers);
+  if (init.body != null) headers.set('content-type', 'application/json');
+
   const response = await fetch(`/api${path}`, {
     credentials: 'same-origin',
     ...init,
-    headers: { 'content-type': 'application/json', ...init.headers },
+    headers,
   });
 
   if (!response.ok) throw await toApiError(response);

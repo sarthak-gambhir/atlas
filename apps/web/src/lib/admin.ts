@@ -48,18 +48,47 @@ export function useUpdateUser() {
   );
 }
 
+export function useDeleteUser() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => api.delete<{ ok: true }>(`/users/${id}`),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['users'] });
+      // Their assigned tasks are now unassigned.
+      await queryClient.invalidateQueries({ queryKey: taskKeys.all });
+    },
+  });
+}
+
 export function useChangePassword() {
   return useMutation({
     mutationFn: (input: ChangePasswordInput) => api.post<{ ok: true }>('/auth/password', input),
   });
 }
 
+/**
+ * A random, easy-to-copy temporary password for an admin-driven reset. Uses an
+ * unambiguous alphabet (no 0/O/1/l) and stays within the 8-1024 server bound.
+ */
+export function generateTempPassword(length = 16): string {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+  const bytes = new Uint32Array(length);
+  crypto.getRandomValues(bytes);
+  let password = '';
+  for (const byte of bytes) password += alphabet[byte % alphabet.length];
+  return password;
+}
+
 export function useImportBackup() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (input: { mode: 'merge' | 'replace'; bundle: BackupBundle }) =>
-      api.post<{ result: ImportResultDto }>('/import', input),
+    mutationFn: (input: {
+      mode: 'merge' | 'replace';
+      bundle: BackupBundle;
+      assigneeMap?: Record<string, string>;
+    }) => api.post<{ result: ImportResultDto }>('/import', input),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: taskKeys.all });
       await queryClient.invalidateQueries({ queryKey: projectKeys.all });

@@ -107,3 +107,44 @@ body {
 .du_badge.bucket-badge-someday {
   border-style: dotted;
 }
+
+/* Palette swatches: each tile paints itself in that palette's own two colors
+ * (set inline) so it reads as a true preview. The active ring is drawn in the
+ * app's own --fg so selection stays legible whatever the tile colors are. */
+.atlas-swatch {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-block-size: 5rem;
+  padding: var(--space-3);
+  border-width: var(--border-width);
+  border-style: solid;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.atlas-swatch-sample {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.atlas-swatch-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm, 0.875rem);
+}
+
+.atlas-swatch:focus-visible {
+  outline: var(--border-width) solid var(--fg);
+  outline-offset: 2px;
+}
+
+.atlas-swatch[aria-pressed='true'] {
+  outline: var(--border-width) solid var(--fg);
+  outline-offset: 3px;
+}

@@ -8,6 +8,7 @@ import { revokeAllSessionsForUser } from '../auth/sessions.ts';
 import {
   countActiveAdmins,
   createUser,
+  deleteUser,
   findUserById,
   findUserByUsername,
   listUsers,
@@ -24,6 +25,7 @@ function toSummary(user: UserRecord): UserSummaryDto {
     displayName: user.displayName,
     role: user.role,
     disabled: user.disabledAt != null,
+    createdAt: user.createdAt,
   };
 }
 
@@ -62,6 +64,15 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
     const target = await findUserById(app.db, id);
     if (!target) return reply.code(404).send({ error: 'not_found', message: 'No such user.' });
 
+    if (input.username !== undefined) {
+      const clash = await findUserByUsername(app.db, input.username);
+      if (clash && clash.id !== id) {
+        return reply
+          .code(409)
+          .send({ error: 'already_exists', message: 'That username is taken.' });
+      }
+    }
+
     // Locking yourself out is never the intent.
     if (input.disabled === true && target.id === request.user!.id) {
       return reply.code(400).send({
@@ -83,6 +94,7 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const updated = await updateUser(app.db, id, {
+      ...(input.username !== undefined ? { username: input.username } : {}),
       ...(input.displayName !== undefined ? { displayName: input.displayName } : {}),
       ...(input.role !== undefined ? { role: input.role } : {}),
       ...(input.disabled !== undefined ? { disabled: input.disabled } : {}),
@@ -99,5 +111,28 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
     }
 
     return { user: toSummary(updated) };
+  });
+
+  app.delete('/users/:id', { preHandler: requireAdmin }, async (request, reply) => {
+    const { id } = idParamsSchema.parse(request.params);
+
+    if (id === request.user!.id) {
+      return reply
+        .code(400)
+        .send({ error: 'cannot_delete_self', message: 'You cannot delete your own account.' });
+    }
+
+    const target = await findUserById(app.db, id);
+    if (!target) return reply.code(404).send({ error: 'not_found', message: 'No such user.' });
+
+    if (target.disabledAt == null) {
+      return reply.code(409).send({
+        error: 'must_disable_first',
+        message: 'Disable the account before deleting it.',
+      });
+    }
+
+    await deleteUser(app.db, id, request.user!.id);
+    return { ok: true as const };
   });
 };

@@ -1,6 +1,7 @@
 import {
   DEFAULT_SCORING,
   type BulkUpdateInput,
+  type BulkUpdateResultDto,
   type CreateTaskInput,
   type ScoringSettings,
   type TaskDto,
@@ -76,6 +77,6 @@ export function useDeleteTask() {
 
 export function useBulkUpdateTasks() {
   return useTaskMutation((input: BulkUpdateInput) =>
-    api.post<{ updated: number; ids: string[] }>('/tasks/bulk', input),
+    api.post<BulkUpdateResultDto>('/tasks/bulk', input),
   );
 }

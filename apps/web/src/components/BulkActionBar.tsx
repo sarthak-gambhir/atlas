@@ -13,7 +13,8 @@ import {
 import { TASK_STATUSES, type BulkUpdateInput, type TaskStatus } from '@atlas/shared';
 
 import { STATUS_LABELS } from '../lib/labels.ts';
-import { useProjects, useUsers } from '../lib/organization.ts';
+import { canEditProject, useProjects, useUsers } from '../lib/organization.ts';
+import { useSession } from '../lib/session.ts';
 import { useBulkUpdateTasks } from '../lib/tasks.ts';
 
 interface BulkActionBarProps {
@@ -30,14 +31,22 @@ export function BulkActionBar({ ids, onDone }: BulkActionBarProps) {
   const bulkUpdate = useBulkUpdateTasks();
   const { data: projects } = useProjects();
   const { data: users } = useUsers();
+  const { data: session } = useSession();
   const { toast } = useToast();
 
   const apply = (patch: BulkUpdateInput['patch'], description: string) => {
     bulkUpdate.mutate(
       { ids, patch },
       {
-        onSuccess: ({ updated }) => {
-          toast({ title: `${description} for ${updated} tasks`, tone: 'success' });
+        onSuccess: ({ updated, skipped, reasons }) => {
+          const suffix =
+            skipped > 0
+              ? ` \u00b7 ${skipped} skipped${reasons.length > 0 ? ` (${reasons.join(', ')})` : ''}`
+              : '';
+          toast({
+            title: `${description} for ${updated} task${updated === 1 ? '' : 's'}${suffix}`,
+            tone: skipped > 0 && updated === 0 ? 'error' : 'success',
+          });
           onDone();
         },
         onError: (cause) =>
@@ -46,7 +55,10 @@ export function BulkActionBar({ ids, onDone }: BulkActionBarProps) {
     );
   };
 
-  const openProjects = (projects ?? []).filter((project) => project.archivedAt == null);
+  // You can only move tasks into projects you can edit (owner/editor/admin).
+  const openProjects = (projects ?? []).filter(
+    (project) => project.archivedAt == null && canEditProject(project, session),
+  );
 
   return (
     <Card>

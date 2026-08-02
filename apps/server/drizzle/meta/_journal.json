@@ -15,6 +15,27 @@
       "when": 1785443714300,
       "tag": "0001_silent_mad_thinker",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785588046341,
+      "tag": "0002_sturdy_robin_chapel",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785602465142,
+      "tag": "0003_charming_star_brand",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1785614406625,
+      "tag": "0004_chief_invisible_woman",
+      "breakpoints": true
     }
   ]
 }

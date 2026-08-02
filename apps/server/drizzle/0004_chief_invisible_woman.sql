@@ -1,0 +1,2 @@
+ALTER TABLE "project_members" ADD COLUMN "role" text DEFAULT 'editor' NOT NULL;--> statement-breakpoint
+ALTER TABLE "project_members" ADD CONSTRAINT "project_members_role_values" CHECK ("project_members"."role" in ('editor', 'viewer'));

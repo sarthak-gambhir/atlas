@@ -16,55 +16,121 @@ import {
   TagInput,
   useToast,
 } from '@astrabound/duality';
-import { bucketFor, computeScore } from '@atlas/shared';
+import {
+  CONFIDENCE_VALUES,
+  bucketFor,
+  computeScore,
+  toConfidence,
+  type Confidence,
+  type ProjectDto,
+} from '@atlas/shared';
 import { useState, type FormEvent } from 'react';
 
 import { BucketBadge } from './BucketBadge.tsx';
 import { formatIsoDate, parseIsoDate, todayIso } from '../lib/dates.ts';
-import { useProjects } from '../lib/organization.ts';
+import { CONFIDENCE_LABELS } from '../lib/labels.ts';
+import { canEditProject, useProjects, useUsers } from '../lib/organization.ts';
+import { useSession } from '../lib/session.ts';
 import { useCreateTask, useScoringSettings } from '../lib/tasks.ts';
 
 interface QuickAddModalProps {
-  isOpen: boolean;
   onClose: () => void;
+  /** Pre-selects a project and seeds the form from its defaults. */
+  initialProjectId?: string;
 }
 
-export function QuickAddModal({ isOpen, onClose }: QuickAddModalProps) {
+interface Seed {
+  assigneeId: string;
+  impact: number;
+  effort: number;
+  confidence: Confidence;
+  tags: string[];
+}
+
+/** Base values plus whatever the chosen project overrides. */
+function seedFor(projects: ProjectDto[] | undefined, projectId: string): Seed {
+  const defaults = projects?.find((project) => project.id === projectId)?.defaults;
+  return {
+    assigneeId: defaults?.assigneeId ?? '',
+    impact: defaults?.impact ?? 3,
+    effort: defaults?.effort ?? 3,
+    confidence: defaults?.confidence != null ? toConfidence(defaults.confidence) : 1,
+    tags: defaults?.tags ?? [],
+  };
+}
+
+/** Mount only while open so the initial project and its defaults stay live. */
+export function QuickAddModal({ onClose, initialProjectId = '' }: QuickAddModalProps) {
   const create = useCreateTask();
   const { data: scoring } = useScoringSettings();
   const { data: projects } = useProjects();
+  const { data: users } = useUsers();
+  const { data: session } = useSession();
   const { toast } = useToast();
 
+  // You can only create tasks in projects you can edit (owner/editor/admin).
+  const editableProjects = (projects ?? []).filter(
+    (project) => project.archivedAt == null && canEditProject(project, session),
+  );
+
+  // Ignore a pre-selected project that is archived, hidden or view-only.
+  const initialProject = editableProjects.find((project) => project.id === initialProjectId);
+  const safeInitialId = initialProject ? initialProjectId : '';
+  const initial = seedFor(projects, safeInitialId);
+
   const [title, setTitle] = useState('');
-  const [impact, setImpact] = useState(3);
-  const [effort, setEffort] = useState(3);
+  const [impact, setImpact] = useState(initial.impact);
+  const [effort, setEffort] = useState(initial.effort);
+  const [confidence, setConfidence] = useState<Confidence>(initial.confidence);
   const [dueDate, setDueDate] = useState<string | null>(null);
-  const [tags, setTags] = useState<string[]>([]);
-  const [projectId, setProjectId] = useState('');
+  const [tags, setTags] = useState<string[]>(initial.tags);
+  const [projectId, setProjectId] = useState(safeInitialId);
+  const [assigneeId, setAssigneeId] = useState(initial.assigneeId);
+
+  // A project scopes the assignee list to its members; without one, anyone active.
+  const selectedProject = projects?.find((project) => project.id === projectId);
+  const memberIds = selectedProject ? new Set(selectedProject.memberIds) : null;
+  const assigneeOptions = [
+    { value: '', label: 'Unassigned' },
+    ...(users ?? [])
+      .filter((user) => (memberIds ? memberIds.has(user.id) : !user.disabled) || user.id === assigneeId)
+      .map((user) => ({ value: user.id, label: user.displayName })),
+  ];
+
+  // Switching projects re-seeds the scoring fields, tags and assignee from that
+  // project's defaults, so a project acts as a task template.
+  const applyProject = (nextProjectId: string) => {
+    setProjectId(nextProjectId);
+    const seed = seedFor(projects, nextProjectId);
+    setImpact(seed.impact);
+    setEffort(seed.effort);
+    setConfidence(seed.confidence);
+    setTags(seed.tags);
+    setAssigneeId(seed.assigneeId);
+  };
 
   const preview = computeScore(
-    { impact, effort, confidence: 1, dueDate, urgencyOverride: null },
+    { impact, effort, confidence, dueDate, urgencyOverride: null },
     scoring,
     todayIso(),
   );
 
-  const reset = () => {
-    setTitle('');
-    setImpact(3);
-    setEffort(3);
-    setDueDate(null);
-    setTags([]);
-    setProjectId('');
-  };
-
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     create.mutate(
-      { title, impact, effort, dueDate, tags, projectId: projectId === '' ? null : projectId },
+      {
+        title,
+        impact,
+        effort,
+        confidence,
+        dueDate,
+        tags,
+        projectId: projectId === '' ? null : projectId,
+        assigneeId: assigneeId === '' ? null : assigneeId,
+      },
       {
         onSuccess: () => {
           toast({ title: 'Task added', tone: 'success' });
-          reset();
           onClose();
         },
         onError: (error) =>
@@ -74,7 +140,7 @@ export function QuickAddModal({ isOpen, onClose }: QuickAddModalProps) {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="md" showCloseButton aria-label="New task">
+    <Modal isOpen onClose={onClose} size="md" showCloseButton aria-label="New task">
       <form onSubmit={submit}>
         <ModalHeader>
           <Inline gap={3} align="center" justify="between">
@@ -119,17 +185,34 @@ export function QuickAddModal({ isOpen, onClose }: QuickAddModalProps) {
               </FormField>
             </Inline>
 
-            <FormField label="Project">
+            <Inline gap={3} align="start">
+              <FormField label="Project">
+                <Select
+                  value={projectId}
+                  options={[
+                    { value: '', label: 'No project' },
+                    ...editableProjects.map((project) => ({
+                      value: project.id,
+                      label: project.name,
+                    })),
+                  ]}
+                  onValueChange={applyProject}
+                />
+              </FormField>
+
+              <FormField label="Assignee">
+                <Select value={assigneeId} options={assigneeOptions} onValueChange={setAssigneeId} />
+              </FormField>
+            </Inline>
+
+            <FormField label="Confidence">
               <Select
-                value={projectId}
-                options={[
-                  { value: '', label: 'No project' },
-                  ...(projects ?? []).map((project) => ({
-                    value: project.id,
-                    label: project.name,
-                  })),
-                ]}
-                onValueChange={setProjectId}
+                value={String(confidence)}
+                options={CONFIDENCE_VALUES.map((value) => ({
+                  value: String(value),
+                  label: CONFIDENCE_LABELS[String(value)] ?? String(value),
+                }))}
+                onValueChange={(value) => setConfidence(toConfidence(Number(value)))}
               />
             </FormField>
 

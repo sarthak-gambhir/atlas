@@ -10,14 +10,21 @@ import {
   type TaskDto,
   type TaskFilter,
   type UpdateTaskInput,
+  type UserRole,
 } from '@atlas/shared';
-import { and, eq, inArray, lte, notInArray, sql, type SQL } from 'drizzle-orm';
+import { and, eq, exists, inArray, isNull, lte, notInArray, sql, type SQL } from 'drizzle-orm';
 
 import type { Database } from '../db/index.ts';
-import { tags, taskTags, tasks } from '../db/schema.ts';
+import { projectMembers, projects, tags, taskTags, tasks } from '../db/schema.ts';
 
 type TaskRow = typeof tasks.$inferSelect;
 type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0];
+
+/** Who is reading. Admins see every task; members are scoped to their projects. */
+export interface TaskViewer {
+  id: string;
+  role: UserRole;
+}
 
 export interface ScoringContext {
   settings: ScoringSettings;
@@ -83,7 +90,7 @@ async function loadTagsByTask(db: Database, taskIds: string[]): Promise<Map<stri
   return byTask;
 }
 
-function buildFilters(filter: TaskFilter): SQL[] {
+function buildFilters(db: Database, filter: TaskFilter, viewer: TaskViewer): SQL[] {
   const conditions: SQL[] = [];
 
   if (filter.status) conditions.push(eq(tasks.status, filter.status));
@@ -108,6 +115,35 @@ function buildFilters(filter: TaskFilter): SQL[] {
     );
   }
 
+  // Membership scope: a member only sees project-less tasks or tasks in their
+  // projects. (Assignment is member-only, so their assigned tasks are covered.)
+  if (viewer.role !== 'admin') {
+    conditions.push(
+      sql`(${isNull(tasks.projectId)} or ${exists(
+        db
+          .select({ one: sql`1` })
+          .from(projectMembers)
+          .where(
+            and(
+              eq(projectMembers.projectId, tasks.projectId),
+              eq(projectMembers.userId, viewer.id),
+            ),
+          ),
+      )})`,
+    );
+  }
+
+  // Tasks in an archived project drop out of every non-project-scoped list, so
+  // an archived project stops competing in the ranked backlog.
+  if (!filter.projectId) {
+    conditions.push(
+      sql`not exists (
+        select 1 from ${projects} p
+        where p.id = ${tasks.projectId} and p.archived_at is not null
+      )`,
+    );
+  }
+
   return conditions;
 }
 
@@ -115,8 +151,9 @@ export async function listTasks(
   db: Database,
   filter: TaskFilter,
   ctx: ScoringContext,
+  viewer: TaskViewer,
 ): Promise<TaskDto[]> {
-  const conditions = buildFilters(filter);
+  const conditions = buildFilters(db, filter, viewer);
   const rows = await db
     .select()
     .from(tasks)
@@ -248,23 +285,127 @@ export async function updateTask(
   return updated ? getTask(db, id, ctx) : undefined;
 }
 
+export interface BulkOutcome {
+  /** Ids that actually changed. */
+  ids: string[];
+  /** How many selected ids were left untouched by a rule. */
+  skipped: number;
+  /** Distinct reasons for the skips, for a one-line summary. */
+  reasons: string[];
+}
+
 /**
- * Applies one small patch to many tasks in a single statement. Returns the ids
- * that actually changed, so a stale selection reports honestly rather than
- * claiming to have updated rows that no longer exist.
+ * Applies one small patch across a selection, skipping tasks a rule protects:
+ * ones the viewer cannot see, ones in an archived project, archived tasks (for
+ * anything but a status change) and ones whose resulting project would not
+ * include a newly set assignee. Returns the ids that changed plus why others
+ * were skipped, so a stale or mixed selection reports honestly. The caller
+ * validates a non-null target project up front (archived / non-member).
  */
 export async function bulkUpdateTasks(
   db: Database,
   ids: string[],
   input: BulkUpdateInput['patch'],
-): Promise<string[]> {
-  if (ids.length === 0) return [];
+  viewer: TaskViewer,
+): Promise<BulkOutcome> {
+  if (ids.length === 0) return { ids: [], skipped: 0, reasons: [] };
+
+  const rows = await db
+    .select({ id: tasks.id, projectId: tasks.projectId, status: tasks.status })
+    .from(tasks)
+    .where(inArray(tasks.id, ids));
+
+  const projectIds = [
+    ...new Set(rows.map((row) => row.projectId).filter((id): id is string => id != null)),
+  ];
+
+  const archivedProjects = new Set<string>();
+  if (projectIds.length > 0) {
+    const archived = await db
+      .select({ id: projects.id })
+      .from(projects)
+      .where(and(inArray(projects.id, projectIds), sql`${projects.archivedAt} is not null`));
+    for (const row of archived) archivedProjects.add(row.id);
+  }
+
+  // A non-admin may only touch tasks in projects they can edit (owner or editor).
+  const memberProjects = new Set<string>();
+  const editProjects = new Set<string>();
+  if (viewer.role !== 'admin' && projectIds.length > 0) {
+    const rowsMember = await db
+      .select({ projectId: projectMembers.projectId, role: projectMembers.role })
+      .from(projectMembers)
+      .where(and(eq(projectMembers.userId, viewer.id), inArray(projectMembers.projectId, projectIds)));
+    for (const row of rowsMember) {
+      memberProjects.add(row.projectId);
+      if (row.role === 'editor') editProjects.add(row.projectId);
+    }
+    const owned = await db
+      .select({ id: projects.id })
+      .from(projects)
+      .where(and(eq(projects.ownerId, viewer.id), inArray(projects.id, projectIds)));
+    for (const row of owned) {
+      memberProjects.add(row.id);
+      editProjects.add(row.id);
+    }
+  }
+
+  const settingProject = input.projectId !== undefined;
+  const targetProject = input.projectId ?? null;
+  const assignee = input.assigneeId ?? null;
+  const settingAssignee = input.assigneeId !== undefined && assignee != null;
+
+  const assigneeProjects = new Set<string>();
+  if (settingAssignee) {
+    const candidates = settingProject ? (targetProject ? [targetProject] : []) : projectIds;
+    if (candidates.length > 0) {
+      const rowsMember = await db
+        .select({ projectId: projectMembers.projectId })
+        .from(projectMembers)
+        .where(and(eq(projectMembers.userId, assignee), inArray(projectMembers.projectId, candidates)));
+      for (const row of rowsMember) assigneeProjects.add(row.projectId);
+    }
+  }
+
+  const reasons = new Set<string>();
+  const eligible: string[] = [];
+
+  for (const row of rows) {
+    if (viewer.role !== 'admin' && row.projectId != null) {
+      if (!memberProjects.has(row.projectId)) {
+        reasons.add('no access');
+        continue;
+      }
+      if (!editProjects.has(row.projectId)) {
+        reasons.add('view-only project');
+        continue;
+      }
+    }
+    if (row.projectId != null && archivedProjects.has(row.projectId)) {
+      reasons.add('in an archived project');
+      continue;
+    }
+    if (row.status === 'archived' && (input.projectId !== undefined || input.assigneeId !== undefined)) {
+      reasons.add('archived task');
+      continue;
+    }
+    if (settingAssignee) {
+      const resultingProject = settingProject ? targetProject : row.projectId;
+      if (resultingProject != null && !assigneeProjects.has(resultingProject)) {
+        reasons.add('assignee is not a member of the project');
+        continue;
+      }
+    }
+    eligible.push(row.id);
+  }
+
+  if (eligible.length === 0) {
+    return { ids: [], skipped: ids.length, reasons: [...reasons] };
+  }
 
   const patch: Partial<typeof tasks.$inferInsert> = { updatedAt: new Date() };
-
   if (input.projectId !== undefined) patch.projectId = input.projectId ?? null;
   if (input.assigneeId !== undefined) patch.assigneeId = input.assigneeId ?? null;
-
   if (input.status !== undefined) {
     patch.status = input.status;
     patch.completedAt = input.status === 'done' ? new Date() : null;
@@ -273,10 +414,11 @@ export async function bulkUpdateTasks(
   const updated = await db
     .update(tasks)
     .set(patch)
-    .where(inArray(tasks.id, ids))
+    .where(inArray(tasks.id, eligible))
     .returning({ id: tasks.id });
 
-  return updated.map((row) => row.id);
+  const updatedIds = updated.map((row) => row.id);
+  return { ids: updatedIds, skipped: ids.length - updatedIds.length, reasons: [...reasons] };
 }
 
 export async function deleteTask(db: Database, id: string): Promise<boolean> {

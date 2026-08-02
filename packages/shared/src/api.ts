@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
-import { TASK_STATUSES, USER_ROLES } from './domain.ts';
+import { PROJECT_ICON_KEYS, PROJECT_MEMBER_ROLES, TASK_STATUSES, USER_ROLES } from './domain.ts';
+import type { ProjectMemberRole } from './domain.ts';
 import type { PRIORITY_BUCKETS } from './score.ts';
 import { CONFIDENCE_VALUES } from './score.ts';
 
@@ -110,9 +111,23 @@ export const reorderSchema = z.object({
 });
 export type ReorderInput = z.infer<typeof reorderSchema>;
 
+export const projectIconSchema = z.enum(PROJECT_ICON_KEYS);
+
+/** Defaults a project seeds into a new task. Every field is optional. */
+export const projectDefaultsSchema = z.object({
+  assigneeId: z.uuid().nullish(),
+  impact: levelSchema.nullish(),
+  effort: levelSchema.nullish(),
+  confidence: confidenceSchema.nullish(),
+  tags: z.array(tagNameSchema).max(20).nullish(),
+});
+export type ProjectDefaultsInput = z.infer<typeof projectDefaultsSchema>;
+
 export const createProjectSchema = z.object({
-  name: z.string().trim().min(1).max(100),
-  description: z.string().max(2_000).nullish(),
+  name: z.string().trim().min(1).max(120),
+  description: z.string().max(1_048).nullish(),
+  icon: projectIconSchema.nullish(),
+  defaults: projectDefaultsSchema.optional(),
 });
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 
@@ -121,13 +136,44 @@ export const updateProjectSchema = createProjectSchema.partial().extend({
 });
 export type UpdateProjectInput = z.infer<typeof updateProjectSchema>;
 
+/** Resolved project defaults returned to the client. */
+export interface ProjectDefaultsDto {
+  assigneeId: string | null;
+  impact: number | null;
+  effort: number | null;
+  confidence: number | null;
+  tags: string[];
+}
+
+export const addProjectMemberSchema = z.object({
+  userId: z.uuid(),
+  /** Defaults to `editor` when omitted. */
+  role: z.enum(PROJECT_MEMBER_ROLES).optional(),
+});
+export type AddProjectMemberInput = z.infer<typeof addProjectMemberSchema>;
+
+export const updateMemberRoleSchema = z.object({ role: z.enum(PROJECT_MEMBER_ROLES) });
+export type UpdateMemberRoleInput = z.infer<typeof updateMemberRoleSchema>;
+
 export interface ProjectDto {
   id: string;
   name: string;
   description: string | null;
+  /** The owning user; owner-or-admin may edit/archive. Null if the owner was deleted. */
+  ownerId: string | null;
+  /** Ids of every member (includes the owner). Admins may act on any project. */
+  memberIds: string[];
+  /** Per-member project role, keyed by user id (the owner is shown as owner regardless). */
+  memberRoles: Record<string, ProjectMemberRole>;
+  icon: (typeof PROJECT_ICON_KEYS)[number] | null;
+  defaults: ProjectDefaultsDto;
   archivedAt: string | null;
   /** Tasks that are neither done nor archived. */
   openTaskCount: number;
+  /** Tasks in a closed status (done or archived). */
+  doneTaskCount: number;
+  /** Every task attached to the project, regardless of status. */
+  totalTaskCount: number;
   createdAt: string;
 }
 
@@ -212,10 +258,31 @@ export const exportedTaskSchema = z.object({
 });
 export type ExportedTask = z.infer<typeof exportedTaskSchema>;
 
+/**
+ * A member in a backup, referenced portably by username with a project role.
+ * A bare string is accepted for backwards compatibility (defaults to `editor`).
+ */
+export const exportedMemberSchema = z.union([
+  z.string(),
+  z.object({ username: z.string(), role: z.enum(PROJECT_MEMBER_ROLES).optional() }),
+]);
+export type ExportedMember = z.infer<typeof exportedMemberSchema>;
+
 export const exportedProjectSchema = z.object({
-  name: z.string().trim().min(1).max(100),
-  description: z.string().max(2_000).nullish(),
+  name: z.string().trim().min(1).max(120),
+  description: z.string().max(1_048).nullish(),
   archived: z.boolean().optional(),
+  icon: projectIconSchema.nullish(),
+  /** The owner, referenced portably by username. */
+  owner: z.string().nullish(),
+  /** Members with their project role. The owner is implied. */
+  members: z.array(exportedMemberSchema).max(1_000).optional(),
+  /** Defaults referenced portably: assignee by username, tags by name. */
+  defaultAssignee: z.string().nullish(),
+  defaultImpact: levelSchema.nullish(),
+  defaultEffort: levelSchema.nullish(),
+  defaultConfidence: confidenceSchema.nullish(),
+  defaultTags: z.array(tagNameSchema).max(20).optional(),
 });
 
 export const backupBundleSchema = z.object({
@@ -237,6 +304,13 @@ export const importRequestSchema = z.object({
    * Anything omitted falls back to unassigned.
    */
   assigneeMap: z.record(z.string(), z.uuid()).optional(),
+  /**
+   * How to keep the assignee-is-member invariant when an existing user is
+   * assigned to a task in a project they are not a member of. Keys are
+   * lower-cased usernames; `add` joins them to that project, `unassign` clears
+   * the assignment. Omitted users default to `add` (assignment preserved).
+   */
+  memberResolution: z.record(z.string(), z.enum(['add', 'unassign'])).optional(),
 });
 export type ImportRequest = z.infer<typeof importRequestSchema>;
 
@@ -244,8 +318,22 @@ export interface ImportResultDto {
   projectsCreated: number;
   tasksCreated: number;
   tagsCreated: number;
+  /** Members added to preserve an assignment (the `add` resolution). */
+  membersAdded: number;
   /** Assignee usernames in the bundle that do not exist here. */
   unknownAssignees: string[];
+  /** Known assignees dropped from a task because of the `unassign` resolution. */
+  unassignedForMembership: string[];
+}
+
+export interface BulkUpdateResultDto {
+  /** Ids that actually changed. */
+  ids: string[];
+  updated: number;
+  /** Ids skipped because a rule (archived project, non-member assignee) blocked them. */
+  skipped: number;
+  /** Distinct human-readable reasons for the skips, for a single-line summary. */
+  reasons: string[];
 }
 
 export interface TaskDto {

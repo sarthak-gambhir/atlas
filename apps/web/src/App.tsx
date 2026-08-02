@@ -9,6 +9,7 @@ import { BoardPage } from './routes/BoardPage.tsx';
 import { LoginPage } from './routes/LoginPage.tsx';
 import { MatrixPage } from './routes/MatrixPage.tsx';
 import { NotFoundPage } from './routes/NotFoundPage.tsx';
+import { ProjectDetailPage } from './routes/ProjectDetailPage.tsx';
 import { ProjectsPage } from './routes/ProjectsPage.tsx';
 import { SettingsPage } from './routes/SettingsPage.tsx';
 
@@ -38,6 +39,7 @@ export function App() {
                   <Route path="board" element={<BoardPage />} />
                   <Route path="matrix" element={<MatrixPage />} />
                   <Route path="projects" element={<ProjectsPage />} />
+                  <Route path="projects/:id" element={<ProjectDetailPage />} />
                   <Route path="settings" element={<SettingsPage />} />
                   <Route path="*" element={<NotFoundPage />} />
                 </Route>

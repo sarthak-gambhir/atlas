@@ -22,6 +22,7 @@ import { useUsers } from '../../lib/organization.ts';
 
 type Mode = 'merge' | 'replace';
 type AssigneeChoice = 'unassigned' | 'map';
+type MemberChoice = 'add' | 'unassign';
 
 const UNASSIGNED = '';
 
@@ -39,6 +40,8 @@ export function ImportSection() {
   const [assigneeChoice, setAssigneeChoice] = useState<AssigneeChoice>('unassigned');
   // Keyed by lower-cased bundle username -> chosen user id ('' = leave unassigned).
   const [assigneeMap, setAssigneeMap] = useState<Record<string, string>>({});
+  // Keyed by lower-cased username -> how to keep the assignee-is-member invariant.
+  const [memberResolution, setMemberResolution] = useState<Record<string, MemberChoice>>({});
 
   const activeUsers = useMemo(() => (users ?? []).filter((user) => !user.disabled), [users]);
   const knownUsernames = useMemo(
@@ -58,9 +61,34 @@ export function ImportSection() {
     return [...seen.values()].sort((a, b) => a.localeCompare(b));
   }, [bundle, knownUsernames]);
 
+  // Existing users assigned to a bundle project they do not belong to. These
+  // break the assignee-is-member invariant unless we add them or unassign them.
+  const nonMemberAssignees = useMemo(() => {
+    if (!bundle) return [];
+    const projectByName = new Map(bundle.projects.map((p) => [p.name.toLowerCase(), p]));
+    const flagged = new Map<string, string>();
+    for (const task of bundle.tasks) {
+      const name = task.assignee?.trim();
+      const projectName = task.project?.trim();
+      if (!name || !projectName) continue;
+      if (!knownUsernames.has(name.toLowerCase())) continue; // unknown users handled above
+      const project = projectByName.get(projectName.toLowerCase());
+      if (!project) continue; // existing project (server defaults to add) or absent
+      const members = new Set(
+        (project.members ?? []).map((m) =>
+          (typeof m === 'string' ? m : m.username).toLowerCase(),
+        ),
+      );
+      if (project.owner) members.add(project.owner.toLowerCase());
+      if (!members.has(name.toLowerCase())) flagged.set(name.toLowerCase(), name);
+    }
+    return [...flagged.values()].sort((a, b) => a.localeCompare(b));
+  }, [bundle, knownUsernames]);
+
   const resetAssignees = () => {
     setAssigneeChoice('unassigned');
     setAssigneeMap({});
+    setMemberResolution({});
   };
 
   const clearFile = () => {
@@ -110,6 +138,16 @@ export function ImportSection() {
           )
         : undefined;
 
+    const resolution =
+      nonMemberAssignees.length > 0
+        ? Object.fromEntries(
+            nonMemberAssignees.map((name) => [
+              name.toLowerCase(),
+              memberResolution[name.toLowerCase()] ?? 'add',
+            ]),
+          )
+        : undefined;
+
     importBackup.mutate(
       {
         mode,
@@ -117,6 +155,7 @@ export function ImportSection() {
         ...(effectiveMap && Object.keys(effectiveMap).length > 0
           ? { assigneeMap: effectiveMap }
           : {}),
+        ...(resolution ? { memberResolution: resolution } : {}),
       },
       {
         onSuccess: ({ result: outcome }) => {
@@ -264,6 +303,41 @@ export function ImportSection() {
             </Stack>
           ) : null}
 
+          {nonMemberAssignees.length > 0 ? (
+            <Stack gap={2}>
+              <Text size="sm" weight="bold">
+                {nonMemberAssignees.length} assignee
+                {nonMemberAssignees.length === 1 ? '' : 's'}{' '}
+                {nonMemberAssignees.length === 1 ? 'is' : 'are'} assigned to a project{' '}
+                {nonMemberAssignees.length === 1 ? 'they are' : 'they are'} not a member of
+              </Text>
+              <Text size="sm">
+                Add them to that project to keep the assignment, or leave those tasks unassigned.
+              </Text>
+
+              {nonMemberAssignees.map((name) => {
+                const key = name.toLowerCase();
+                return (
+                  <Inline key={key} gap={3} align="center" justify="between">
+                    <Text size="sm">@{name}</Text>
+                    <Select
+                      value={memberResolution[key] ?? 'add'}
+                      options={[
+                        { value: 'add', label: 'Add to project' },
+                        { value: 'unassign', label: 'Leave unassigned' },
+                      ]}
+                      onValueChange={(value) => {
+                        if (value === 'add' || value === 'unassign') {
+                          setMemberResolution((prev) => ({ ...prev, [key]: value }));
+                        }
+                      }}
+                    />
+                  </Inline>
+                );
+              })}
+            </Stack>
+          ) : null}
+
           <Inline gap={2}>
             <Button variant="solid" disabled={importBackup.isPending} onClick={startImport}>
               {importBackup.isPending
@@ -282,11 +356,22 @@ export function ImportSection() {
           <Stack gap={1}>
             <Text size="sm">
               {result.tasksCreated} tasks, {result.projectsCreated} projects and {result.tagsCreated}{' '}
-              tags added.
+              tags added
+              {result.membersAdded > 0
+                ? `, ${result.membersAdded} project membership${
+                    result.membersAdded === 1 ? '' : 's'
+                  } added`
+                : ''}
+              .
             </Text>
             {result.unknownAssignees.length > 0 ? (
               <Text size="sm">
                 Left unassigned (no such user): {result.unknownAssignees.join(', ')}
+              </Text>
+            ) : null}
+            {result.unassignedForMembership.length > 0 ? (
+              <Text size="sm">
+                Left unassigned (not a project member): {result.unassignedForMembership.join(', ')}
               </Text>
             ) : null}
           </Stack>

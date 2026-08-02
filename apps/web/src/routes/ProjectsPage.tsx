@@ -1,59 +1,34 @@
-import {
-  Alert,
-  Badge,
-  Button,
-  Card,
-  CardBody,
-  EmptyState,
-  FormField,
-  Inline,
-  Input,
-  Stack,
-  Text,
-  Textarea,
-  useToast,
-} from '@astrabound/duality';
-import { useState, type FormEvent } from 'react';
+import { Alert, Button, EmptyState, Grid, Inline, Input, Stack } from '@astrabound/duality';
+import type { ProjectDto } from '@atlas/shared';
+import { useMemo, useState } from 'react';
 
 import { PageHeader } from '../components/PageHeader.tsx';
-import { useCreateProject, useProjects, useUpdateProject } from '../lib/organization.ts';
+import { ProjectCard } from '../components/projects/ProjectCard.tsx';
+import { ProjectFormModal } from '../components/projects/ProjectFormModal.tsx';
+import { useProjects } from '../lib/organization.ts';
+import { useSession } from '../lib/session.ts';
+
+/** `null` when the form is closed, `{}` when creating, `{ project }` when editing. */
+type FormState = { project?: ProjectDto } | null;
 
 export function ProjectsPage() {
   const [includeArchived, setIncludeArchived] = useState(false);
+  const [search, setSearch] = useState('');
+  const [form, setForm] = useState<FormState>(null);
+
   const { data: projects, isPending, error } = useProjects(includeArchived);
-  const createProject = useCreateProject();
-  const updateProject = useUpdateProject();
-  const { toast } = useToast();
+  const { data: session } = useSession();
+  const isAdmin = session?.role === 'admin';
 
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-
-  const submit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    createProject.mutate(
-      { name, description: description.trim() === '' ? null : description },
-      {
-        onSuccess: () => {
-          toast({ title: 'Project created', tone: 'success' });
-          setName('');
-          setDescription('');
-        },
-        onError: (cause) =>
-          toast({ title: 'Could not create project', description: cause.message, tone: 'error' }),
-      },
+  const filtered = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (query === '') return projects ?? [];
+    return (projects ?? []).filter(
+      (project) =>
+        project.name.toLowerCase().includes(query) ||
+        (project.description?.toLowerCase().includes(query) ?? false),
     );
-  };
-
-  const setArchived = (id: string, archived: boolean) => {
-    updateProject.mutate(
-      { id, archived },
-      {
-        onSuccess: () => toast({ title: archived ? 'Project archived' : 'Project restored' }),
-        onError: (cause) =>
-          toast({ title: 'Could not update project', description: cause.message, tone: 'error' }),
-      },
-    );
-  };
+  }, [projects, search]);
 
   return (
     <Stack gap={4}>
@@ -61,82 +36,61 @@ export function ProjectsPage() {
         title="Projects"
         count={projects?.length}
         actions={
-          <Button
-            variant={includeArchived ? 'solid' : 'inverse'}
-            onClick={() => setIncludeArchived((previous) => !previous)}
-          >
-            Show archived
+          <Button variant="solid" onClick={() => setForm({})}>
+            New project
           </Button>
         }
       />
 
-      <Card as="form" onSubmit={submit}>
-        <CardBody>
-          <Stack gap={3}>
-            <FormField label="Name" required>
-              <Input
-                value={name}
-                placeholder="Website"
-                onChange={(event) => setName(event.target.value)}
-              />
-            </FormField>
-
-            <FormField label="Description">
-              <Textarea
-                value={description}
-                autosize
-                minRows={2}
-                onChange={(event) => setDescription(event.target.value)}
-              />
-            </FormField>
-
-            <Inline justify="end">
-              <Button
-                type="submit"
-                variant="solid"
-                disabled={createProject.isPending || name.trim() === ''}
-              >
-                {createProject.isPending ? 'Creating...' : 'Create project'}
-              </Button>
-            </Inline>
-          </Stack>
-        </CardBody>
-      </Card>
+      <Inline gap={3} align="center" justify="between" wrap>
+        <Input
+          value={search}
+          placeholder="Search projects"
+          clearable
+          aria-label="Search projects"
+          onClear={() => setSearch('')}
+          onChange={(event) => setSearch(event.target.value)}
+          style={{ maxWidth: 320 }}
+        />
+        <Button variant="inverse" onClick={() => setIncludeArchived((previous) => !previous)}>
+          {includeArchived ? 'Hide archived' : 'Show archived'}
+        </Button>
+      </Inline>
 
       {error ? <Alert tone="error">{error.message}</Alert> : null}
 
-      {!isPending && projects && projects.length === 0 ? (
+      {!isPending && filtered.length === 0 ? (
         <EmptyState
-          title="No projects yet"
-          description="Projects are optional: tasks can live without one."
+          title={search.trim() ? 'No projects match' : 'No projects yet'}
+          description={
+            search.trim()
+              ? 'Try a different search.'
+              : 'Projects are optional: tasks can live without one.'
+          }
+          action={
+            search.trim() ? null : (
+              <Button variant="solid" onClick={() => setForm({})}>
+                New project
+              </Button>
+            )
+          }
         />
       ) : (
-        <Stack gap={2}>
-          {(projects ?? []).map((project) => (
-            <Card key={project.id}>
-              <CardBody>
-                <Inline gap={3} align="center" justify="between">
-                  <Stack gap={1}>
-                    <Inline gap={2} align="center">
-                      <Text weight="bold">{project.name}</Text>
-                      <Badge variant="outline">{project.openTaskCount} open</Badge>
-                      {project.archivedAt ? <Badge variant="solid">archived</Badge> : null}
-                    </Inline>
-                    {project.description ? <Text size="sm">{project.description}</Text> : null}
-                  </Stack>
-
-                  <Button
-                    variant="ghost"
-                    onClick={() => setArchived(project.id, project.archivedAt == null)}
-                  >
-                    {project.archivedAt ? 'Restore' : 'Archive'}
-                  </Button>
-                </Inline>
-              </CardBody>
-            </Card>
+        <Grid minChildWidth={300} gap={3}>
+          {filtered.map((project) => (
+            <ProjectCard
+              key={project.id}
+              project={project}
+              isAdmin={isAdmin}
+              onEdit={() => setForm({ project })}
+            />
           ))}
-        </Stack>
+        </Grid>
       )}
+
+      {form ? (
+        <ProjectFormModal project={form.project} isOpen onClose={() => setForm(null)} />
+      ) : null}
     </Stack>
   );
 }

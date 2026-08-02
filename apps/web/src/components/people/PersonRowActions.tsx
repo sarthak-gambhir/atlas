@@ -96,7 +96,12 @@ export function PersonRowActions({ person, isSelf, isLastAdmin, onEdit }: Person
         placement="bottom-end"
         aria-label={`Actions for ${person.displayName}`}
         trigger={
-          <Button variant="ghost" size="sm" aria-label={`Actions for ${person.displayName}`}>
+          <Button
+            variant="inverse"
+            size="sm"
+            aria-label={`Actions for ${person.displayName}`}
+            className="atlas-action-menu-button"
+          >
             <RiMore2Fill aria-hidden />
           </Button>
         }

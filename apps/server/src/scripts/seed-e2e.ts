@@ -7,7 +7,7 @@ import pg from 'pg';
 
 import { hashPassword } from '../auth/password.ts';
 import { createDatabase, type Database } from '../db/index.ts';
-import { createProject, updateProject } from '../repositories/projects.ts';
+import { addProjectMember, createProject, updateProject } from '../repositories/projects.ts';
 import { scoringContext, createTask } from '../repositories/tasks.ts';
 import { createUser } from '../repositories/users.ts';
 
@@ -89,15 +89,28 @@ export async function seedE2eDatabase(url: string): Promise<void> {
       role: 'member',
     });
 
-    const website = await createProject(db, {
-      name: 'Website relaunch',
-      description: 'Marketing site rebuild on the new design system.',
-    });
-    const platform = await createProject(db, {
-      name: 'Platform',
-      description: 'Internal tooling and reliability work.',
-    });
-    const archived = await createProject(db, { name: 'Legacy migration' });
+    const website = await createProject(
+      db,
+      {
+        name: 'Website relaunch',
+        description: 'Marketing site rebuild on the new design system.',
+      },
+      admin.id,
+    );
+    const platform = await createProject(
+      db,
+      {
+        name: 'Platform',
+        description: 'Internal tooling and reliability work.',
+      },
+      admin.id,
+    );
+    const archived = await createProject(db, { name: 'Legacy migration' }, admin.id);
+
+    // The member works alongside the admin, so add them to the active projects.
+    for (const project of [website, platform]) {
+      await addProjectMember(db, project.id, member.id);
+    }
 
     const ctx = scoringContext(DEFAULT_SCORING);
 

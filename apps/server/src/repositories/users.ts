@@ -2,7 +2,7 @@ import type { UserRole } from '@atlas/shared';
 import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 
 import type { Database } from '../db/index.ts';
-import { tasks, users } from '../db/schema.ts';
+import { projects, tasks, users } from '../db/schema.ts';
 
 export interface UserRecord {
   id: string;
@@ -118,9 +118,11 @@ export async function updateUser(
 }
 
 /**
- * Permanently removes a user. `tasks.assignee_id` (ON DELETE set null) and
- * `sessions.user_id` (cascade) resolve themselves, but `tasks.created_by` is
- * NOT NULL, so those tasks are handed to the acting admin first.
+ * Permanently removes a user. `tasks.assignee_id` (ON DELETE set null),
+ * `project_members.user_id` (cascade) and `sessions.user_id` (cascade) resolve
+ * themselves, but `tasks.created_by` is NOT NULL, so those tasks are handed to
+ * the acting admin first. Projects the user owned are archived (and their
+ * `owner_id` is nulled by the FK) so nothing changes for other users afterward.
  */
 export async function deleteUser(
   db: Database,
@@ -129,6 +131,13 @@ export async function deleteUser(
 ): Promise<boolean> {
   return db.transaction(async (tx) => {
     await tx.update(tasks).set({ createdBy: reassignCreatedByTo }).where(eq(tasks.createdBy, id));
+
+    // Archive their projects before the FK nulls the owner, so they become read-only.
+    await tx
+      .update(projects)
+      .set({ archivedAt: sql`coalesce(${projects.archivedAt}, now())`, updatedAt: new Date() })
+      .where(eq(projects.ownerId, id));
+
     const rows = await tx.delete(users).where(eq(users.id, id)).returning({ id: users.id });
     return rows.length > 0;
   });

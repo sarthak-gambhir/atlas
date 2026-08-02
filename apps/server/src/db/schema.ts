@@ -61,11 +61,30 @@ export const projects = pgTable(
     id: uuid('id').primaryKey(),
     name: text('name').notNull(),
     description: text('description'),
+    /** The project's owner; owner-or-admin may edit/archive it. Nulled if the owner is deleted. */
+    ownerId: uuid('owner_id').references(() => users.id, { onDelete: 'set null' }),
+    /** A curated icon key (see PROJECT_ICON_KEYS); null falls back to a folder. */
+    icon: text('icon'),
+    /** Defaults seeded into a new task created in this project. All optional. */
+    defaultAssigneeId: uuid('default_assignee_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    defaultImpact: smallint('default_impact'),
+    defaultEffort: smallint('default_effort'),
+    defaultConfidence: real('default_confidence'),
     archivedAt: timestamp('archived_at', { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [uniqueIndex('projects_name_lower_idx').on(sql`lower(${t.name})`)],
+  (t) => [
+    uniqueIndex('projects_name_lower_idx').on(sql`lower(${t.name})`),
+    check('projects_default_impact_range', sql`${t.defaultImpact} is null or ${t.defaultImpact} between 1 and 5`),
+    check('projects_default_effort_range', sql`${t.defaultEffort} is null or ${t.defaultEffort} between 1 and 5`),
+    check(
+      'projects_default_confidence_values',
+      sql`${t.defaultConfidence} is null or ${t.defaultConfidence} in (0, 0.5, 0.8, 1.0)`,
+    ),
+  ],
 );
 
 export const tasks = pgTable(
@@ -127,6 +146,43 @@ export const taskTags = pgTable(
       .references(() => tags.id, { onDelete: 'cascade' }),
   },
   (t) => [primaryKey({ columns: [t.taskId, t.tagId] })],
+);
+
+/**
+ * Who may see and work in a project. Admins bypass this (they see everything);
+ * members see only the projects they belong to. The owner is always a member.
+ */
+export const projectMembers = pgTable(
+  'project_members',
+  {
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** Per-project role: `editor` can edit tasks, `viewer` is read-only. */
+    role: text('role').notNull().default('editor'),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.projectId, t.userId] }),
+    check('project_members_role_values', sql`${t.role} in ('editor', 'viewer')`),
+  ],
+);
+
+/** Tags seeded into a new task created in a project (mirrors task_tags). */
+export const projectDefaultTags = pgTable(
+  'project_default_tags',
+  {
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    tagId: uuid('tag_id')
+      .notNull()
+      .references(() => tags.id, { onDelete: 'cascade' }),
+  },
+  (t) => [primaryKey({ columns: [t.projectId, t.tagId] })],
 );
 
 export const settings = pgTable('settings', {

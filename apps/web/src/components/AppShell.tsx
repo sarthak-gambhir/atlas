@@ -40,9 +40,13 @@ export function AppShell() {
   const logout = useLogout();
 
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [quickAddProjectId, setQuickAddProjectId] = useState<string | undefined>(undefined);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
-  const openQuickAdd = useCallback(() => setQuickAddOpen(true), []);
+  const openQuickAdd = useCallback((projectId?: string) => {
+    setQuickAddProjectId(projectId);
+    setQuickAddOpen(true);
+  }, []);
 
   // Duality's own SidebarTrigger only works inside <Sidebar>, and a 64px rail is
   // no place for it, so the sidebar is controlled from here instead.
@@ -59,6 +63,7 @@ export function AppShell() {
       if (event.key === 'n' && !event.metaKey && !event.ctrlKey && !event.altKey) {
         if (isTyping(event.target)) return;
         event.preventDefault();
+        setQuickAddProjectId(undefined);
         setQuickAddOpen(true);
       }
     };
@@ -197,7 +202,12 @@ export function AppShell() {
         </Box>
       </Box>
 
-      <QuickAddModal isOpen={quickAddOpen} onClose={() => setQuickAddOpen(false)} />
+      {quickAddOpen ? (
+        <QuickAddModal
+          initialProjectId={quickAddProjectId}
+          onClose={() => setQuickAddOpen(false)}
+        />
+      ) : null}
 
       <CommandBar
         isOpen={paletteOpen}

@@ -59,6 +59,31 @@ body {
   inline-size: 100%;
 }
 
+/* Icon-only action menu triggers (the "..." buttons on cards, rows and tables). */
+.atlas-action-menu-button {
+  padding: var(--space-1);
+}
+
+/* Shrink a trailing actions column in a DataTable to just its content width. */
+.atlas-actions-table table th:last-child,
+.atlas-actions-table table td:last-child {
+  inline-size: 1%;
+  white-space: nowrap;
+
+  .du_menu_root {
+    width: max-content;
+  }
+}
+
+/* A <form> wrapping ModalHeader/Body/Footer otherwise breaks the modal's flex
+ * chain, so the body can't scroll and the whole dialog overflows. This makes the
+ * form a bounded flex column so ModalBody's overflow-y scroll takes over. */
+.atlas-modal-form {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 0;
+}
+
 /* The main region is the only scroll container, so the sidebar and header
  * stay put while content pans. */
 .atlas-main {
@@ -147,4 +172,61 @@ body {
 .atlas-swatch[aria-pressed='true'] {
   outline: var(--border-width) solid var(--fg);
   outline-offset: 3px;
+}
+
+/* A two-color completion bar: a bordered track filled with solid --fg. */
+.atlas-progress {
+  position: relative;
+  block-size: 0.5rem;
+  inline-size: 100%;
+  border: var(--border-width) solid var(--fg);
+  overflow: hidden;
+}
+
+.atlas-progress-fill {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  background: var(--fg);
+}
+
+/* Icon picker: a compact grid of pressable icon tiles. */
+.atlas-icon-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: var(--space-2);
+}
+
+.atlas-icon-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  border: var(--border-width) solid var(--fg);
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.atlas-icon-option:focus-visible {
+  outline: var(--border-width) solid var(--fg);
+  outline-offset: 2px;
+}
+
+.atlas-icon-option[aria-pressed='true'] {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+/* Whole-card link that keeps a project card's body clickable without swallowing
+ * the action menu (which stops propagation itself). */
+.atlas-card-link {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.atlas-card-link:focus-visible {
+  outline: var(--border-width) solid var(--fg);
+  outline-offset: 2px;
 }

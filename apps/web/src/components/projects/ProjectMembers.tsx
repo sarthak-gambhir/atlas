@@ -51,6 +51,9 @@ export function ProjectMembers({ project, canManage }: ProjectMembersProps) {
 
   const [removing, setRemoving] = useState<UserSummaryDto | null>(null);
   const [transferring, setTransferring] = useState<UserSummaryDto | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkRemoving, setBulkRemoving] = useState(false);
+  const [bulkPending, setBulkPending] = useState(false);
 
   const members = useMemo(() => {
     const byId = new Map((users ?? []).map((user) => [user.id, user]));
@@ -93,6 +96,26 @@ export function ProjectMembers({ project, canManage }: ProjectMembersProps) {
           toast({ title: 'Could not remove member', description: cause.message, tone: 'error' }),
       },
     );
+  };
+
+  // The owner cannot be removed, so drop it from any bulk selection.
+  const removableSelected = selectedIds.filter((id) => id !== project.ownerId);
+
+  const confirmBulkRemove = async () => {
+    setBulkPending(true);
+    const results = await Promise.allSettled(
+      removableSelected.map((userId) => removeMember.mutateAsync({ id: project.id, userId })),
+    );
+    setBulkPending(false);
+    const removed = results.filter((result) => result.status === 'fulfilled').length;
+    const failed = results.length - removed;
+    const skippedOwner = selectedIds.length - removableSelected.length;
+    const parts = [`${removed} removed`];
+    if (skippedOwner > 0) parts.push(`${skippedOwner} skipped (owner)`);
+    if (failed > 0) parts.push(`${failed} failed`);
+    toast({ title: parts.join(', '), tone: failed > 0 ? 'error' : 'success' });
+    setSelectedIds([]);
+    setBulkRemoving(false);
   };
 
   const changeRole = (member: UserSummaryDto, role: ProjectMemberRole) => {
@@ -138,6 +161,8 @@ export function ProjectMembers({ project, canManage }: ProjectMembersProps) {
         sortable: true,
         cell: (member) => (
           <Inline gap={2} align="center">
+            {/* Marks the owner's row so its selection checkbox can be hidden via CSS. */}
+            {member.id === project.ownerId ? <span data-atlas-owner hidden /> : null}
             <Avatar name={member.displayName} size="sm" />
             <Stack gap={0}>
               <Inline gap={2} align="center">
@@ -236,6 +261,15 @@ export function ProjectMembers({ project, canManage }: ProjectMembersProps) {
         </Inline>
       ) : null}
 
+      {canManage && removableSelected.length > 0 ? (
+        <Inline gap={2} align="center" justify="between">
+          <Badge variant="solid">{removableSelected.length} selected</Badge>
+          <Button variant="inverse" onClick={() => setBulkRemoving(true)}>
+            Remove selected
+          </Button>
+        </Inline>
+      ) : null}
+
       <DataTable
         aria-label={`Members of ${project.name}`}
         className={canManage ? 'atlas-actions-table' : undefined}
@@ -245,6 +279,10 @@ export function ProjectMembers({ project, canManage }: ProjectMembersProps) {
         filterable={true}
         filterPlaceholder="Search members"
         emptyMessage="No members yet."
+        selectable={canManage}
+        selectedIds={canManage ? selectedIds : undefined}
+        onSelectionChange={canManage ? (ids) => setSelectedIds(ids.map(String)) : undefined}
+        pageSize={10}
       />
 
       <ConfirmDialog
@@ -256,6 +294,17 @@ export function ProjectMembers({ project, canManage }: ProjectMembersProps) {
         isLoading={removeMember.isPending}
         onCancel={() => setRemoving(null)}
         onConfirm={confirmRemove}
+      />
+
+      <ConfirmDialog
+        isOpen={bulkRemoving}
+        tone="danger"
+        title={`Remove ${removableSelected.length} member${removableSelected.length === 1 ? '' : 's'}?`}
+        description="They lose access to this project, and any tasks assigned to them here become unassigned."
+        confirmLabel="Remove"
+        isLoading={bulkPending}
+        onCancel={() => setBulkRemoving(false)}
+        onConfirm={() => void confirmBulkRemove()}
       />
 
       <ConfirmDialog

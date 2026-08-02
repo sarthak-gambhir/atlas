@@ -16,6 +16,7 @@ export default tseslint.config(
       'test-results/**',
       'e2e/screenshots/**',
       'e2e/.auth/**',
+      '__sandbox__/**',
     ],
   },
 

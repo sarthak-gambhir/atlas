@@ -1,21 +1,13 @@
-import {
-  Alert,
-  Badge,
-  Divider,
-  Grid,
-  Inline,
-  Skeleton,
-  Stack,
-  Text,
-  useToast,
-} from '@astrabound/duality';
-import type { TaskDto, TaskStatus } from '@atlas/shared';
-import { useState } from 'react';
+import { Alert, Grid, Skeleton, Stack, Stat, StatGroup, Text, useToast } from '@astrabound/duality';
+import { CLOSED_STATUSES, type TaskDto, type TaskStatus } from '@atlas/shared';
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router';
 
+import { BoardBucket } from '../components/board/BoardBucket.tsx';
+import { BoardBucketModal } from '../components/board/BoardBucketModal.tsx';
 import { FilterBar } from '../components/FilterBar.tsx';
 import { PageHeader } from '../components/PageHeader.tsx';
-import { TaskCard } from '../components/TaskCard.tsx';
-import { TaskDrawer } from '../components/TaskDrawer.tsx';
+import { todayIso } from '../lib/dates.ts';
 import { useFilters } from '../lib/filters.ts';
 import { BOARD_STATUSES, STATUS_LABELS } from '../lib/labels.ts';
 import { useTasks, useUpdateTask } from '../lib/tasks.ts';
@@ -26,7 +18,8 @@ export function BoardPage() {
   const { data: tasks, isPending, error } = useTasks(filters.query);
   const update = useUpdateTask();
   const { toast } = useToast();
-  const [selected, setSelected] = useState<TaskDto | null>(null);
+  const navigate = useNavigate();
+  const [openStatus, setOpenStatus] = useState<TaskStatus | null>(null);
 
   const move = (task: TaskDto, status: TaskStatus) => {
     update.mutate(
@@ -39,45 +32,67 @@ export function BoardPage() {
     );
   };
 
+  // Bucket every task by status (each list sorted by score) so the columns and
+  // the modal read from the same derived data.
+  const byStatus = useMemo(() => {
+    const groups = {} as Record<TaskStatus, TaskDto[]>;
+    for (const status of BOARD_STATUSES) groups[status] = [];
+    for (const task of tasks ?? []) groups[task.status]?.push(task);
+    for (const status of BOARD_STATUSES) groups[status].sort((a, b) => b.score - a.score);
+    return groups;
+  }, [tasks]);
+
+  const stats = useMemo(() => {
+    const today = todayIso();
+    const all = tasks ?? [];
+    const open = all.filter((task) => !CLOSED_STATUSES.includes(task.status));
+    return {
+      open: open.length,
+      overdue: open.filter((task) => task.dueDate != null && task.dueDate < today).length,
+      done: all.filter((task) => task.status === 'done').length,
+    };
+  }, [tasks]);
+
   return (
     <Stack gap={4}>
       <PageHeader title="Board" />
 
-      <FilterBar filters={filters} showStatus={false} />
+      <FilterBar filters={filters} showStatus={false} showClosedToggle={false} excludeArchived />
+
+      <StatGroup>
+        <Stat label="Open" value={stats.open} />
+        <Stat label="Overdue" value={stats.overdue} />
+        <Stat label="Done" value={stats.done} />
+      </StatGroup>
+
+      <Text size="sm">
+        Active work grouped by status, highest score first. Archived tasks are hidden here; open
+        the backlog and show closed tasks to see them.
+      </Text>
 
       {error ? <Alert tone="error">{error.message}</Alert> : null}
 
-      <Grid minChildWidth={240} gap={3} align="start">
-        {BOARD_STATUSES.map((status) => {
-          const column = (tasks ?? []).filter((task) => task.status === status);
-
-          return (
-            <Stack key={status} gap={2}>
-              <Inline gap={2} align="center" justify="between">
-                <Text weight="bold">{STATUS_LABELS[status]}</Text>
-                <Badge variant="outline">{column.length}</Badge>
-              </Inline>
-
-              <Divider decorative />
-
-              {isPending ? (
-                <Skeleton height={72} />
-              ) : column.length === 0 ? (
-                <Text size="sm">Nothing here</Text>
-              ) : (
-                <Stack gap={2}>
-                  {column.map((task) => (
-                    <TaskCard key={task.id} task={task} onOpen={setSelected} onMove={move} />
-                  ))}
-                </Stack>
-              )}
-            </Stack>
-          );
-        })}
+      <Grid minChildWidth={260} gap={3} align="start">
+        {isPending
+          ? BOARD_STATUSES.map((status) => <Skeleton key={status} height={160} />)
+          : BOARD_STATUSES.map((status) => (
+              <BoardBucket
+                key={status}
+                status={status}
+                tasks={byStatus[status]}
+                onViewAll={setOpenStatus}
+              />
+            ))}
       </Grid>
 
-      {selected ? (
-        <TaskDrawer key={selected.id} task={selected} onClose={() => setSelected(null)} />
+      {openStatus ? (
+        <BoardBucketModal
+          status={openStatus}
+          tasks={byStatus[openStatus]}
+          onClose={() => setOpenStatus(null)}
+          onOpenTask={(id) => void navigate(`/tasks/${id}`)}
+          onMove={move}
+        />
       ) : null}
     </Stack>
   );

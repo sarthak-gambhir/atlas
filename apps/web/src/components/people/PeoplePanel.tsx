@@ -91,9 +91,7 @@ export function PeoplePanel() {
       header: 'Joined',
       value: (person) => person.createdAt,
       sortable: true,
-      cell: (person) => (
-        <Text size="sm">{new Date(person.createdAt).toLocaleDateString()}</Text>
-      ),
+      cell: (person) => <Text size="sm">{new Date(person.createdAt).toLocaleDateString()}</Text>,
     },
     {
       id: 'actions',
@@ -154,6 +152,7 @@ export function PeoplePanel() {
         initialSort={{ columnId: 'person', direction: 'asc' }}
         emptyMessage="No people match these filters."
         aria-label="People"
+        pageSize={10}
       />
 
       <AddPersonModal isOpen={addOpen} onClose={() => setAddOpen(false)} />

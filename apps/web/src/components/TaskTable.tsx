@@ -11,11 +11,11 @@ import {
   type DataTableColumn,
 } from '@astrabound/duality';
 import { CLOSED_STATUSES, type TaskDto, type TaskFilter } from '@atlas/shared';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useRef, useState, type ReactNode } from 'react';
+import { useNavigate } from 'react-router';
 
 import { BucketBadge } from './BucketBadge.tsx';
 import { BulkActionBar } from './BulkActionBar.tsx';
-import { TaskDrawer } from './TaskDrawer.tsx';
 import { describeDueDate } from '../lib/dates.ts';
 import { STATUS_LABELS } from '../lib/labels.ts';
 import { useCompleteTask, useTasks } from '../lib/tasks.ts';
@@ -39,8 +39,11 @@ export function TaskTable({
   ariaLabel = 'Ranked tasks',
   readOnly = false,
 }: TaskTableProps) {
-  const [selected, setSelected] = useState<TaskDto | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const navigate = useNavigate();
+  // Set during click capture when the click lands on a selection checkbox, so
+  // the row's own click handler skips navigation for that one event.
+  const skipRowClickRef = useRef(false);
 
   const { data: tasks, isPending, error } = useTasks(query);
   const complete = useCompleteTask();
@@ -158,25 +161,39 @@ export function TaskTable({
       {!isPending && tasks && tasks.length === 0 ? (
         emptyState
       ) : (
-        <DataTable
-          aria-label={ariaLabel}
-          columns={columns}
-          data={tasks ?? []}
-          getRowId={(task) => task.id}
-          filterable={false}
-          isLoading={isPending}
-          emptyMessage="No tasks match."
-          onRowClick={readOnly ? undefined : setSelected}
-          selectable={!readOnly}
-          selectedIds={activeSelection}
-          onSelectionChange={(ids) => setSelectedIds(ids.map(String))}
-          pageSize={20}
-        />
+        <div
+          onClickCapture={(event) => {
+            // A click on the selection checkbox must toggle it, not navigate.
+            // Flag it here (without stopping the event, which would also stop
+            // the checkbox from toggling) and let onRowClick skip this event.
+            skipRowClickRef.current =
+              (event.target as HTMLElement).closest('.du_data_table_select_cell') != null;
+            // Clear after this dispatch so it can't stale-block a later
+            // keyboard row activation, which fires no click event.
+            queueMicrotask(() => {
+              skipRowClickRef.current = false;
+            });
+          }}
+        >
+          <DataTable
+            aria-label={ariaLabel}
+            columns={columns}
+            data={tasks ?? []}
+            getRowId={(task) => task.id}
+            filterable={false}
+            isLoading={isPending}
+            emptyMessage="No tasks match."
+            onRowClick={(task) => {
+              if (skipRowClickRef.current) return;
+              void navigate(`/tasks/${task.id}`);
+            }}
+            selectable={!readOnly}
+            selectedIds={activeSelection}
+            onSelectionChange={(ids) => setSelectedIds(ids.map(String))}
+            pageSize={10}
+          />
+        </div>
       )}
-
-      {selected ? (
-        <TaskDrawer key={selected.id} task={selected} onClose={() => setSelected(null)} />
-      ) : null}
     </Stack>
   );
 }

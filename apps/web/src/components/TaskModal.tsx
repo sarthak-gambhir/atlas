@@ -3,14 +3,14 @@ import {
   Badge,
   Button,
   DatePicker,
-  Drawer,
-  DrawerBody,
-  DrawerFooter,
-  DrawerHeader,
   FormField,
   Heading,
   Inline,
   Input,
+  Modal,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
   NumberInput,
   Select,
   Stack,
@@ -37,13 +37,15 @@ import { canEditProject, useProjects, useUsers } from '../lib/organization.ts';
 import { useSession } from '../lib/session.ts';
 import { useDeleteTask, useScoringSettings, useUpdateTask } from '../lib/tasks.ts';
 
-interface TaskDrawerProps {
+interface TaskModalProps {
   task: TaskDto;
   onClose: () => void;
+  /** Called instead of `onClose` after a successful delete (e.g. to navigate away). */
+  onDeleted?: () => void;
 }
 
 /** Mount with `key={task.id}` so switching tasks resets the draft. */
-export function TaskDrawer({ task, onClose }: TaskDrawerProps) {
+export function TaskModal({ task, onClose, onDeleted }: TaskModalProps) {
   const update = useUpdateTask();
   const remove = useDeleteTask();
   const { data: scoring } = useScoringSettings();
@@ -146,7 +148,8 @@ export function TaskDrawer({ task, onClose }: TaskDrawerProps) {
     remove.mutate(task.id, {
       onSuccess: () => {
         toast({ title: 'Task deleted' });
-        onClose();
+        if (onDeleted) onDeleted();
+        else onClose();
       },
       onError: (error) =>
         toast({ title: 'Could not delete', description: error.message, tone: 'error' }),
@@ -154,8 +157,8 @@ export function TaskDrawer({ task, onClose }: TaskDrawerProps) {
   };
 
   return (
-    <Drawer isOpen onClose={onClose} side="end" size="md" showCloseButton aria-label="Task details">
-      <DrawerHeader>
+    <Modal isOpen onClose={onClose} size="lg" showCloseButton aria-label="Task details">
+      <ModalHeader>
         <Inline gap={3} align="center" justify="between">
           <Heading level={2} visualLevel={4}>
             Task
@@ -165,9 +168,9 @@ export function TaskDrawer({ task, onClose }: TaskDrawerProps) {
             <BucketBadge bucket={bucketFor(preview, scoring.thresholds)} />
           </Inline>
         </Inline>
-      </DrawerHeader>
+      </ModalHeader>
 
-      <DrawerBody>
+      <ModalBody>
         <Stack gap={4}>
           {inArchivedProject ? (
             <Alert tone="info">This task is in an archived project. Restore the project to edit it.</Alert>
@@ -290,17 +293,17 @@ export function TaskDrawer({ task, onClose }: TaskDrawerProps) {
             {task.completedAt ? `, completed ${new Date(task.completedAt).toLocaleDateString()}` : ''}
           </Text>
         </Stack>
-      </DrawerBody>
+      </ModalBody>
 
-      <DrawerFooter>
+      <ModalFooter>
         {actionsHidden ? (
-          <Inline gap={2} justify="end">
+          <Inline gap={2} justify="end" style={{ inlineSize: '100%' }}>
             <Button variant="solid" onClick={onClose}>
               Close
             </Button>
           </Inline>
         ) : (
-          <Inline gap={2} align="center" justify="between">
+          <Inline gap={2} align="center" justify="between" style={{ inlineSize: '100%' }}>
             {confirmingDelete ? (
               <Inline gap={2} align="center">
                 <Button variant="solid" onClick={destroy} disabled={remove.isPending}>
@@ -336,7 +339,7 @@ export function TaskDrawer({ task, onClose }: TaskDrawerProps) {
             </Inline>
           </Inline>
         )}
-      </DrawerFooter>
-    </Drawer>
+      </ModalFooter>
+    </Modal>
   );
 }

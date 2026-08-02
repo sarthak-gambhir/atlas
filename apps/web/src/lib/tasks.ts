@@ -15,6 +15,7 @@ import { api } from './api.ts';
 export const taskKeys = {
   all: ['tasks'] as const,
   list: (filter: TaskFilter) => ['tasks', 'list', filter] as const,
+  detail: (id: string) => ['tasks', 'detail', id] as const,
 };
 
 function toSearch(filter: TaskFilter): string {
@@ -30,6 +31,16 @@ export function useTasks(filter: TaskFilter = {}) {
   return useQuery({
     queryKey: taskKeys.list(filter),
     queryFn: async () => (await api.get<{ tasks: TaskDto[] }>(`/tasks${toSearch(filter)}`)).tasks,
+  });
+}
+
+export function useTask(id: string | undefined) {
+  return useQuery({
+    queryKey: taskKeys.detail(id ?? ''),
+    queryFn: async () => (await api.get<{ task: TaskDto }>(`/tasks/${id!}`)).task,
+    enabled: id != null,
+    // A 404 (deleted or no access) should surface at once, not after retries.
+    retry: false,
   });
 }
 

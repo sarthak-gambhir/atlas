@@ -12,6 +12,7 @@ import { NotFoundPage } from './routes/NotFoundPage.tsx';
 import { ProjectDetailPage } from './routes/ProjectDetailPage.tsx';
 import { ProjectsPage } from './routes/ProjectsPage.tsx';
 import { SettingsPage } from './routes/SettingsPage.tsx';
+import { TaskDetailPage } from './routes/TaskDetailPage.tsx';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -36,6 +37,7 @@ export function App() {
               <Route element={<RequireAuth />}>
                 <Route element={<AppShell />}>
                   <Route index element={<BacklogPage />} />
+                  <Route path="tasks/:id" element={<TaskDetailPage />} />
                   <Route path="board" element={<BoardPage />} />
                   <Route path="matrix" element={<MatrixPage />} />
                   <Route path="projects" element={<ProjectsPage />} />

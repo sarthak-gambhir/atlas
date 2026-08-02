@@ -29,7 +29,8 @@ export interface UseFilters {
 }
 
 export function useFilters(initial: Partial<FilterState> = {}): UseFilters {
-  const [state, setState] = useState<FilterState>({ ...EMPTY, ...initial });
+  const baseline: FilterState = { ...EMPTY, ...initial };
+  const [state, setState] = useState<FilterState>(baseline);
 
   const query = useMemo<TaskFilter>(() => {
     const trimmed = state.q.trim();
@@ -43,11 +44,21 @@ export function useFilters(initial: Partial<FilterState> = {}): UseFilters {
     };
   }, [state]);
 
+  // "Filtered" means the user changed something away from the page's baseline
+  // (e.g. the board starts with closed included), so Clear has something to do.
+  const isFiltered =
+    state.q.trim() !== baseline.q ||
+    state.status !== baseline.status ||
+    state.projectId !== baseline.projectId ||
+    state.assigneeId !== baseline.assigneeId ||
+    state.tag !== baseline.tag ||
+    state.includeClosed !== baseline.includeClosed;
+
   return {
     state,
     set: (patch) => setState((previous) => ({ ...previous, ...patch })),
-    clear: () => setState({ ...EMPTY, ...initial }),
+    clear: () => setState(baseline),
     query,
-    isFiltered: Object.keys(query).length > 0,
+    isFiltered,
   };
 }

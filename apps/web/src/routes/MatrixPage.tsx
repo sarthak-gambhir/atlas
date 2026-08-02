@@ -11,11 +11,11 @@ import {
   TruncatedText,
 } from '@astrabound/duality';
 import type { TaskDto } from '@atlas/shared';
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useMemo, type CSSProperties } from 'react';
+import { useNavigate } from 'react-router';
 
 import { FilterBar } from '../components/FilterBar.tsx';
 import { PageHeader } from '../components/PageHeader.tsx';
-import { TaskDrawer } from '../components/TaskDrawer.tsx';
 import { useFilters } from '../lib/filters.ts';
 import { useTasks } from '../lib/tasks.ts';
 
@@ -26,7 +26,7 @@ const IMPACT_ROWS = [...LEVELS].reverse();
 export function MatrixPage() {
   const filters = useFilters();
   const { data: tasks, isPending, error } = useTasks(filters.query);
-  const [selected, setSelected] = useState<TaskDto | null>(null);
+  const navigate = useNavigate();
 
   const cells = useMemo(() => {
     const grouped = new Map<string, TaskDto[]>();
@@ -72,14 +72,10 @@ export function MatrixPage() {
             impact={impact}
             cells={cells}
             isPending={isPending}
-            onOpen={setSelected}
+            onOpen={(task) => void navigate(`/tasks/${task.id}`)}
           />
         ))}
       </Grid>
-
-      {selected ? (
-        <TaskDrawer key={selected.id} task={selected} onClose={() => setSelected(null)} />
-      ) : null}
     </Stack>
   );
 }

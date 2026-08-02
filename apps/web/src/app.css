@@ -75,6 +75,26 @@ body {
   }
 }
 
+/* The project owner can't be removed, so hide the selection checkbox on its
+ * row (the owner is also excluded from any bulk removal in code). */
+.atlas-actions-table table tr:has([data-atlas-owner]) .du_data_table_select_cell {
+  visibility: hidden;
+}
+
+/* Keep a DataTable within its container (e.g. a modal) and let long cell text
+ * wrap instead of forcing the table wider than the dialog. Pair with
+ * .atlas-actions-table to keep the trailing actions column compact and unwrapped. */
+.atlas-fit-table table {
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+
+.atlas-fit-table table tbody td,
+.atlas-fit-table table tbody th {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 /* A <form> wrapping ModalHeader/Body/Footer otherwise breaks the modal's flex
  * chain, so the body can't scroll and the whole dialog overflows. This makes the
  * form a bounded flex column so ModalBody's overflow-y scroll takes over. */

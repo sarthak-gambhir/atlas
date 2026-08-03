@@ -10,7 +10,7 @@ import {
   useToast,
   type DataTableColumn,
 } from '@astrabound/duality';
-import { CLOSED_STATUSES, type TaskDto, type TaskFilter } from '@atlas/shared';
+import { type TaskDto, type TaskFilter } from '@atlas/shared';
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 
@@ -18,7 +18,7 @@ import { BucketBadge } from './BucketBadge.tsx';
 import { BulkActionBar } from './BulkActionBar.tsx';
 import { describeDueDate } from '../lib/dates.ts';
 import { STATUS_LABELS } from '../lib/labels.ts';
-import { useCompleteTask, useTasks } from '../lib/tasks.ts';
+import { useCompleteTask, useTasks, useUpdateTask } from '../lib/tasks.ts';
 
 interface TaskTableProps {
   query: TaskFilter;
@@ -47,6 +47,7 @@ export function TaskTable({
 
   const { data: tasks, isPending, error } = useTasks(query);
   const complete = useCompleteTask();
+  const update = useUpdateTask();
   const { toast } = useToast();
 
   // A selection outlives a filter change, so only act on rows still on screen.
@@ -94,18 +95,21 @@ export function TaskTable({
       },
       {
         id: 'due',
-        header: 'Due',
+        header: <span style={{ display: 'inline-block', minInlineSize: '10ch' }}>Due</span>,
         value: (task) => task.dueDate ?? '',
         sortable: true,
-        cell: (task) =>
-          task.dueDate ? (
+        cell: (task) => {
+          if (!task.dueDate) return <Text size="sm">—</Text>;
+          // Far-off dates have no relative phrase (describeDueDate echoes the
+          // date), so only add the second line when it says something new.
+          const relative = describeDueDate(task.dueDate, task.status);
+          return (
             <Stack gap={0}>
               <Text size="sm">{task.dueDate}</Text>
-              <Text size="sm">{describeDueDate(task.dueDate)}</Text>
+              {relative !== task.dueDate ? <Text size="sm">{relative}</Text> : null}
             </Stack>
-          ) : (
-            <Text size="sm">—</Text>
-          ),
+          );
+        },
       },
       {
         id: 'effort',
@@ -127,11 +131,66 @@ export function TaskTable({
         cell: (task) => <Text size="sm">{STATUS_LABELS[task.status]}</Text>,
       },
       {
+        id: 'completed',
+        header: 'Completed',
+        value: (task) => task.completedAt ?? '',
+        sortable: true,
+        cell: (task) => <Text size="sm">{task.completedAt ? task.completedAt.slice(0, 10) : '—'}</Text>,
+      },
+      {
         id: 'actions',
         header: '',
         align: 'end',
-        cell: (task) =>
-          readOnly || (CLOSED_STATUSES as readonly string[]).includes(task.status) ? null : (
+        cell: (task) => {
+          if (readOnly) return null;
+
+          if (task.status === 'archived') {
+            return (
+              <Button
+                size="sm"
+                variant="inverse"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  // A previously completed task returns to done; otherwise it
+                  // goes back to the backlog.
+                  update.mutate(
+                    { id: task.id, status: task.completedAt ? 'done' : 'backlog' },
+                    {
+                      onSuccess: () => toast({ title: `Restored "${task.title}"`, tone: 'success' }),
+                      onError: (cause) =>
+                        toast({ title: 'Could not restore', description: cause.message, tone: 'error' }),
+                    },
+                  );
+                }}
+              >
+                Restore
+              </Button>
+            );
+          }
+
+          if (task.status === 'done') {
+            return (
+              <Button
+                size="sm"
+                variant="inverse"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  update.mutate(
+                    { id: task.id, status: 'archived' },
+                    {
+                      onSuccess: () => toast({ title: `Archived "${task.title}"`, tone: 'success' }),
+                      onError: (cause) =>
+                        toast({ title: 'Could not archive', description: cause.message, tone: 'error' }),
+                    },
+                  );
+                }}
+              >
+                Archive
+              </Button>
+            );
+          }
+
+          return (
             <Button
               size="sm"
               variant="inverse"
@@ -144,10 +203,11 @@ export function TaskTable({
             >
               Done
             </Button>
-          ),
+          );
+        },
       },
     ],
-    [complete, toast, readOnly],
+    [complete, update, toast, readOnly],
   );
 
   return (

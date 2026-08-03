@@ -270,8 +270,20 @@ export async function updateTask(
 
   if (input.status !== undefined) {
     patch.status = input.status;
-    // Completion time follows the status rather than being set by hand.
-    patch.completedAt = input.status === 'done' ? new Date() : null;
+    // Completion time follows the status rather than being set by hand, but it
+    // survives an archive (so a done task stays visibly done) and a later
+    // re-completion keeps the original date rather than restamping "now".
+    if (input.status === 'done') {
+      const [current] = await db
+        .select({ completedAt: tasks.completedAt })
+        .from(tasks)
+        .where(eq(tasks.id, id));
+      if (!current) return undefined;
+      patch.completedAt = current.completedAt ?? new Date();
+    } else if (input.status !== 'archived') {
+      patch.completedAt = null;
+    }
+    // 'archived': leave completedAt untouched so the prior completion shows.
   }
 
   const updated = await db.transaction(async (tx) => {
@@ -408,7 +420,10 @@ export async function bulkUpdateTasks(
   if (input.assigneeId !== undefined) patch.assigneeId = input.assigneeId ?? null;
   if (input.status !== undefined) {
     patch.status = input.status;
-    patch.completedAt = input.status === 'done' ? new Date() : null;
+    // Archiving keeps each row's own completedAt (so done work stays done);
+    // reopening to an active status clears it; completing stamps now.
+    if (input.status === 'done') patch.completedAt = new Date();
+    else if (input.status !== 'archived') patch.completedAt = null;
   }
 
   const updated = await db

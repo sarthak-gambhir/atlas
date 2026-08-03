@@ -1,4 +1,4 @@
-import { daysBetween, toIsoDate } from '@atlas/shared';
+import { CLOSED_STATUSES, daysBetween, toIsoDate, type TaskStatus } from '@atlas/shared';
 
 /**
  * Date-only values are calendar dates, not instants. Parsing them at local
@@ -24,8 +24,12 @@ export function todayIso(): string {
   return formatIsoDate(new Date()) ?? toIsoDate(new Date());
 }
 
-export function describeDueDate(dueDate: string | null): string {
+export function describeDueDate(dueDate: string | null, status?: TaskStatus): string {
   if (!dueDate) return '';
+
+  // Once a task is closed (done/archived), relative wording like "overdue" no
+  // longer makes sense, so fall back to just the date.
+  if (status && (CLOSED_STATUSES as readonly string[]).includes(status)) return dueDate;
 
   const days = daysBetween(todayIso(), dueDate);
   if (days === 0) return 'today';

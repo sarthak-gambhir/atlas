@@ -33,6 +33,10 @@ function isTyping(target: EventTarget | null): boolean {
   return ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
 }
 
+// Persist the sidebar collapse the same way Duality persists the theme: a small
+// localStorage flag, read once on mount and written whenever it changes.
+const NAV_COLLAPSED_KEY = 'atlas-nav-collapsed';
+
 export function AppShell() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -50,7 +54,21 @@ export function AppShell() {
 
   // Duality's own SidebarTrigger only works inside <Sidebar>, and a 64px rail is
   // no place for it, so the sidebar is controlled from here instead.
-  const [navCollapsed, setNavCollapsed] = useState(false);
+  const [navCollapsed, setNavCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(NAV_COLLAPSED_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(NAV_COLLAPSED_KEY, String(navCollapsed));
+    } catch {
+      // Ignore storage failures (e.g. private mode); state still works in-session.
+    }
+  }, [navCollapsed]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {

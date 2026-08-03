@@ -112,7 +112,16 @@ export function TaskDetailPage() {
         </Field>
 
         <Field label="Due date">
-          <Text>{task.dueDate ? `${task.dueDate} (${describeDueDate(task.dueDate)})` : 'No due date'}</Text>
+          <Text>
+            {task.dueDate
+              ? (() => {
+                  const relative = describeDueDate(task.dueDate, task.status);
+                  return relative && relative !== task.dueDate
+                    ? `${task.dueDate} (${relative})`
+                    : task.dueDate;
+                })()
+              : 'No due date'}
+          </Text>
         </Field>
 
         <Field label="Tags">

@@ -1,20 +1,11 @@
-import {
-  Alert,
-  Badge,
-  Button,
-  Card,
-  CardBody,
-  Grid,
-  Inline,
-  Stack,
-  Text,
-  TruncatedText,
-} from '@astrabound/duality';
+import { Alert, Grid, Skeleton, Stack, Stat, StatGroup, Text } from '@astrabound/duality';
 import type { TaskDto } from '@atlas/shared';
-import { useMemo, type CSSProperties } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router';
 
 import { FilterBar } from '../components/FilterBar.tsx';
+import { MatrixCell } from '../components/matrix/MatrixCell.tsx';
+import { MatrixCellModal } from '../components/matrix/MatrixCellModal.tsx';
 import { PageHeader } from '../components/PageHeader.tsx';
 import { useFilters } from '../lib/filters.ts';
 import { useTasks } from '../lib/tasks.ts';
@@ -23,11 +14,18 @@ const LEVELS = [1, 2, 3, 4, 5] as const;
 /** High impact at the top, so the cheapest wins sit in the top-left. */
 const IMPACT_ROWS = [...LEVELS].reverse();
 
+/** Split at the middle: impact >= 3 is high, effort <= 3 is low. */
+const isHighImpact = (task: TaskDto) => task.impact >= 3;
+const isLowEffort = (task: TaskDto) => task.effort <= 3;
+
 export function MatrixPage() {
   const filters = useFilters();
   const { data: tasks, isPending, error } = useTasks(filters.query);
   const navigate = useNavigate();
+  const [openCell, setOpenCell] = useState<{ impact: number; effort: number } | null>(null);
 
+  // Group by impact:effort, each list sorted by score so the tile shows the top
+  // score and the modal reads the same order.
   const cells = useMemo(() => {
     const grouped = new Map<string, TaskDto[]>();
     for (const task of tasks ?? []) {
@@ -36,8 +34,23 @@ export function MatrixPage() {
       if (existing) existing.push(task);
       else grouped.set(key, [task]);
     }
+    for (const list of grouped.values()) list.sort((a, b) => b.score - a.score);
     return grouped;
   }, [tasks]);
+
+  const quadrants = useMemo(() => {
+    const all = tasks ?? [];
+    return {
+      quickWins: all.filter((t) => isHighImpact(t) && isLowEffort(t)).length,
+      bigBets: all.filter((t) => isHighImpact(t) && !isLowEffort(t)).length,
+      fillIns: all.filter((t) => !isHighImpact(t) && isLowEffort(t)).length,
+      timeSinks: all.filter((t) => !isHighImpact(t) && !isLowEffort(t)).length,
+    };
+  }, [tasks]);
+
+  const openTasks = openCell
+    ? (cells.get(`${openCell.impact}:${openCell.effort}`) ?? [])
+    : [];
 
   return (
     <Stack gap={4}>
@@ -47,6 +60,17 @@ export function MatrixPage() {
       />
 
       <FilterBar filters={filters} />
+
+      <StatGroup>
+        <Stat label="Quick wins" value={quadrants.quickWins} />
+        <Stat label="Big bets" value={quadrants.bigBets} />
+        <Stat label="Fill-ins" value={quadrants.fillIns} />
+        <Stat label="Time sinks" value={quadrants.timeSinks} />
+      </StatGroup>
+
+      <Text size="sm">
+        High impact and low effort is a quick win. Click any cell to see its tasks.
+      </Text>
 
       {error ? <Alert tone="error">{error.message}</Alert> : null}
 
@@ -72,10 +96,20 @@ export function MatrixPage() {
             impact={impact}
             cells={cells}
             isPending={isPending}
-            onOpen={(task) => void navigate(`/tasks/${task.id}`)}
+            onOpen={(i, e) => setOpenCell({ impact: i, effort: e })}
           />
         ))}
       </Grid>
+
+      {openCell ? (
+        <MatrixCellModal
+          impact={openCell.impact}
+          effort={openCell.effort}
+          tasks={openTasks}
+          onClose={() => setOpenCell(null)}
+          onOpenTask={(id) => void navigate(`/tasks/${id}`)}
+        />
+      ) : null}
     </Stack>
   );
 }
@@ -84,7 +118,7 @@ interface MatrixRowProps {
   impact: number;
   cells: Map<string, TaskDto[]>;
   isPending: boolean;
-  onOpen: (task: TaskDto) => void;
+  onOpen: (impact: number, effort: number) => void;
 }
 
 /** A fragment, so every cell stays a direct child of the one grid. */
@@ -95,40 +129,19 @@ function MatrixRow({ impact, cells, isPending, onOpen }: MatrixRowProps) {
         {impact}
       </Text>
 
-      {LEVELS.map((effort) => {
-        const inCell = cells.get(`${impact}:${effort}`) ?? [];
-
-        return (
-          <Card key={`${impact}:${effort}`}>
-            <CardBody>
-              {isPending ? (
-                <Text size="sm">...</Text>
-              ) : inCell.length === 0 ? (
-                <Text size="sm">—</Text>
-              ) : (
-                <Stack gap={1}>
-                  <Inline gap={1} align="center" justify="between">
-                    <Badge variant="outline" size="sm">
-                      {inCell.length}
-                    </Badge>
-                    <Badge variant="solid" size="sm">
-                      {inCell[0]?.score}
-                    </Badge>
-                  </Inline>
-
-                  {inCell.slice(0, 4).map((task) => (
-                    <Button key={task.id} variant="ghost" size="sm" onClick={() => onOpen(task)}>
-                      <TruncatedText>{task.title}</TruncatedText>
-                    </Button>
-                  ))}
-
-                  {inCell.length > 4 ? <Text size="sm">+{inCell.length - 4} more</Text> : null}
-                </Stack>
-              )}
-            </CardBody>
-          </Card>
-        );
-      })}
+      {LEVELS.map((effort) =>
+        isPending ? (
+          <Skeleton key={`${impact}:${effort}`} height={64} />
+        ) : (
+          <MatrixCell
+            key={`${impact}:${effort}`}
+            impact={impact}
+            effort={effort}
+            tasks={cells.get(`${impact}:${effort}`) ?? []}
+            onOpen={onOpen}
+          />
+        ),
+      )}
     </>
   );
 }

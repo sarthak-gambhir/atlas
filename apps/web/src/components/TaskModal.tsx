@@ -101,7 +101,8 @@ export function TaskModal({ task, onClose, onDeleted }: TaskModalProps) {
 
   const restore = () => {
     update.mutate(
-      { id: task.id, status: 'backlog' },
+      // A previously completed task returns to done; otherwise to the backlog.
+      { id: task.id, status: task.completedAt ? 'done' : 'backlog' },
       {
         onSuccess: () => {
           toast({ title: 'Task restored', tone: 'success' });
@@ -177,7 +178,9 @@ export function TaskModal({ task, onClose, onDeleted }: TaskModalProps) {
           ) : viewOnlyProject ? (
             <Alert tone="info">You have view-only access to this task&rsquo;s project.</Alert>
           ) : isArchivedTask ? (
-            <Alert tone="info">This task is archived. Restore it to move it back to the backlog.</Alert>
+            <Alert tone="info">
+              This task is archived. Restore it to move it back to your active work.
+            </Alert>
           ) : null}
 
           <FormField label="Title" required>

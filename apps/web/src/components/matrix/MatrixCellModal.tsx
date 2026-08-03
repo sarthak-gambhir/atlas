@@ -4,8 +4,6 @@ import {
   DataTable,
   Heading,
   Inline,
-  Menu,
-  MenuItem,
   Modal,
   ModalBody,
   ModalFooter,
@@ -14,29 +12,28 @@ import {
   type DataTableColumn,
 } from '@astrabound/duality';
 import { useMemo } from 'react';
-import type { TaskDto, TaskStatus } from '@atlas/shared';
+import type { TaskDto } from '@atlas/shared';
 
 import { describeDueDate } from '../../lib/dates.ts';
-import { BOARD_STATUSES, STATUS_LABELS } from '../../lib/labels.ts';
 import { ScoreCell } from '../ScoreCell.tsx';
 
-interface BoardBucketModalProps {
-  status: TaskStatus;
-  /** Tasks in this status, sorted by score descending. */
+interface MatrixCellModalProps {
+  impact: number;
+  effort: number;
+  /** Tasks in this cell, sorted by score descending. */
   tasks: TaskDto[];
   onClose: () => void;
   onOpenTask: (id: string) => void;
-  onMove: (task: TaskDto, status: TaskStatus) => void;
 }
 
-/** The full task list for one board column, as a compact, movable table. */
-export function BoardBucketModal({
-  status,
+/** The full task list for one impact/effort cell, as a compact table. */
+export function MatrixCellModal({
+  impact,
+  effort,
   tasks,
   onClose,
   onOpenTask,
-  onMove,
-}: BoardBucketModalProps) {
+}: MatrixCellModalProps) {
   const columns = useMemo<DataTableColumn<TaskDto>[]>(
     () => [
       {
@@ -63,50 +60,22 @@ export function BoardBucketModal({
           <Text size="sm">{task.dueDate ? describeDueDate(task.dueDate, task.status) : '—'}</Text>
         ),
       },
-      {
-        id: 'actions',
-        header: '',
-        align: 'end',
-        cell: (task) => (
-          // Stop the click bubbling to the row (which would navigate) while still
-          // letting the trigger's own click open the menu, so use the bubble
-          // phase rather than capture.
-          <div onClick={(event) => event.stopPropagation()}>
-            <Menu
-              aria-label={`Move ${task.title}`}
-              className="atlas-modal-menu"
-              placement="bottom-end"
-              trigger={
-                <Button size="sm" variant="inverse">
-                  Move
-                </Button>
-              }
-            >
-              {BOARD_STATUSES.filter((option) => option !== status).map((option) => (
-                <MenuItem key={option} onSelect={() => onMove(task, option)}>
-                  {STATUS_LABELS[option]}
-                </MenuItem>
-              ))}
-            </Menu>
-          </div>
-        ),
-      },
     ],
-    [status, onMove],
+    [],
   );
 
   return (
     <Modal
       isOpen
       onClose={onClose}
-      size="lg"
+      size="xl"
       showCloseButton
-      aria-label={`${STATUS_LABELS[status]} tasks`}
+      aria-label={`Impact ${impact}, effort ${effort} tasks`}
     >
       <ModalHeader>
         <Inline gap={2} align="center" justify="start">
           <Heading level={2} visualLevel={4}>
-            {STATUS_LABELS[status]}
+            Impact {impact} / Effort {effort}
           </Heading>
           <Badge variant="outline">{tasks.length}</Badge>
         </Inline>
@@ -114,8 +83,8 @@ export function BoardBucketModal({
 
       <ModalBody>
         <DataTable
-          aria-label={`${STATUS_LABELS[status]} tasks`}
-          className="atlas-actions-table atlas-fit-table"
+          aria-label={`Impact ${impact}, effort ${effort} tasks`}
+          className="atlas-fit-table"
           columns={columns}
           data={tasks}
           getRowId={(task) => task.id}

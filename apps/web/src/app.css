@@ -95,6 +95,92 @@ body {
   overflow-wrap: anywhere;
 }
 
+/* Matrix cell: a bordered tile that is itself the click target, so there is no
+ * nested Card/Button padding pushing the content inward. */
+.atlas-matrix-tile {
+  display: grid;
+  inline-size: 100%;
+  min-block-size: 4rem;
+  border: var(--border-width) solid var(--fg);
+  background: var(--bg);
+  color: var(--fg);
+}
+
+button.atlas-matrix-tile {
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  text-align: center;
+}
+
+button.atlas-matrix-tile:hover {
+  outline: var(--border-width) solid var(--fg);
+  outline-offset: -3px;
+}
+
+/* Empty cells: centered muted dash, no split. */
+.atlas-matrix-tile--empty {
+  place-items: center;
+}
+
+/* Populated cells: two side-by-side blocks (Tasks | Top score) with a solid
+ * seam so each reads as its own block, edge to edge. */
+.atlas-matrix-tile--cell {
+  grid-template-columns: 1fr 1fr;
+}
+
+.atlas-matrix-cell__block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: var(--space-2);
+}
+
+.atlas-matrix-cell__block + .atlas-matrix-cell__block {
+  border-inline-start: var(--border-width) solid var(--fg);
+}
+
+/* The Top score block is inverted (solid --fg) so it reads as the emphasis. */
+.atlas-matrix-cell__block--invert {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+/* The score breakdown tooltip lives inside a Modal. Duality gives tooltips a
+ * lower z-index than modals (so it would open behind the modal), and paints
+ * them inverted with no wrapping. Lift it over the modal and restore the plain
+ * two-color surface so the factor table reads normally. */
+.du_tooltip.atlas-score-tip {
+  z-index: calc(var(--z-modal) + 1);
+  padding: var(--space-2);
+  color: var(--fg);
+  background-color: var(--bg);
+  white-space: normal;
+}
+
+/* A Menu opened from inside a Modal (e.g. the board's Move menu) is portaled at
+ * the popover layer, which sits below the modal. Lift it over the modal so its
+ * items are visible and clickable. */
+.du_menu.atlas-modal-menu {
+  z-index: calc(var(--z-modal) + 1);
+}
+
+.atlas-score-trigger {
+  cursor: default;
+}
+
+/* When a table row inverts (hover, focus, or selected) its cells flip to a
+ * solid --fg surface, which would swallow the solid score badge. Invert the
+ * badge to the opposite surface so the score stays legible. */
+.du_data_table tbody tr[data-selected] .atlas-score-trigger .du_badge,
+.du_data_table tbody tr[data-interactive]:hover .atlas-score-trigger .du_badge,
+.du_data_table tbody tr[data-interactive]:focus-visible .atlas-score-trigger .du_badge {
+  color: var(--fg);
+  background-color: var(--bg);
+}
+
 /* A <form> wrapping ModalHeader/Body/Footer otherwise breaks the modal's flex
  * chain, so the body can't scroll and the whole dialog overflows. This makes the
  * form a bounded flex column so ModalBody's overflow-y scroll takes over. */

@@ -15,7 +15,7 @@ import { Link, useNavigate, useParams } from 'react-router';
 
 import { BucketBadge } from '../components/BucketBadge.tsx';
 import { TaskModal } from '../components/TaskModal.tsx';
-import { describeDueDate } from '../lib/dates.ts';
+import { dueLabel } from '../lib/dates.ts';
 import { CONFIDENCE_LABELS, STATUS_LABELS } from '../lib/labels.ts';
 import { useProjects, useUsers } from '../lib/organization.ts';
 import { useTask } from '../lib/tasks.ts';
@@ -61,6 +61,7 @@ export function TaskDetailPage() {
 
   const project = task.projectId ? projects?.find((p) => p.id === task.projectId) : undefined;
   const assignee = task.assigneeId ? users?.find((u) => u.id === task.assigneeId) : undefined;
+  const dates = dueLabel(task);
 
   return (
     <Stack gap={4}>
@@ -111,17 +112,25 @@ export function TaskDetailPage() {
           <Text>{CONFIDENCE_LABELS[String(task.confidence)] ?? String(task.confidence)}</Text>
         </Field>
 
-        <Field label="Due date">
-          <Text>
-            {task.dueDate
-              ? (() => {
-                  const relative = describeDueDate(task.dueDate, task.status);
-                  return relative && relative !== task.dueDate
-                    ? `${task.dueDate} (${relative})`
-                    : task.dueDate;
-                })()
-              : 'No due date'}
-          </Text>
+        <Field label="Dates">
+          {task.dueStartDate || task.dueEndDate ? (
+            <Stack gap={1}>
+              <Text>Start: {task.dueStartDate ?? '—'}</Text>
+              <Text>Due: {task.dueEndDate ?? '—'}</Text>
+              {dates.date && dates.phrase !== dates.date ? (
+                <Text size="sm">
+                  {dates.prefix} {dates.phrase}
+                </Text>
+              ) : null}
+              {dates.lateStart ? (
+                <Badge size="sm" variant="outline">
+                  Should have started
+                </Badge>
+              ) : null}
+            </Stack>
+          ) : (
+            <Text>No dates</Text>
+          )}
         </Field>
 
         <Field label="Tags">

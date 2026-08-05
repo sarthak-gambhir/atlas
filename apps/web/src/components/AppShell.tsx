@@ -3,6 +3,9 @@ import {
   Box,
   Button,
   Divider,
+  Drawer,
+  DrawerBody,
+  DrawerHeader,
   Heading,
   Inline,
   Kbd,
@@ -17,11 +20,13 @@ import {
   Text,
 } from '@astrabound/duality';
 import { useCallback, useEffect, useState } from 'react';
+import { RiMenuLine, RiSearchLine } from 'react-icons/ri';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 
 import { NAV_ITEMS, activeNavPath } from '../lib/nav.ts';
 import { QuickAddContext } from '../lib/quick-add.ts';
 import { useLogout, useSession } from '../lib/session.ts';
+import { useIsMobile } from '../lib/useIsMobile.ts';
 import { BrandMark } from './BrandMark.tsx';
 import { CommandBar } from './CommandBar.tsx';
 import { QuickAddModal } from './QuickAddModal.tsx';
@@ -42,11 +47,13 @@ export function AppShell() {
   const location = useLocation();
   const { data: user } = useSession();
   const logout = useLogout();
+  const isMobile = useIsMobile();
 
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [quickAddProjectId, setQuickAddProjectId] = useState<string | undefined>(undefined);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
   const openQuickAdd = useCallback((projectId?: string) => {
     setQuickAddProjectId(projectId);
     setQuickAddOpen(true);
@@ -90,117 +97,149 @@ export function AppShell() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  return (
-    <Inline
-      className="atlas-shell"
-      gap={0}
-      align="stretch"
-      wrap={false}
+  const navItems = NAV_ITEMS.map((item) => ({
+    id: item.path,
+    label: item.label,
+    icon: <item.Icon aria-hidden />,
+    onSelect: () => {
+      setNavOpen(false);
+      void navigate(item.path);
+    },
+  }));
+
+  const accountMenu = (
+    <Popover
+      placement="bottom-end"
+      open={accountOpen}
+      onOpenChange={setAccountOpen}
+      trigger={
+        <Button variant="ghost" size="sm" aria-label="Account menu">
+          <Inline gap={2} align="center">
+            <Avatar name={user?.displayName} size="sm" />
+            {!isMobile ? <Text size="sm">{user?.displayName}</Text> : null}
+          </Inline>
+        </Button>
+      }
     >
+      <Stack gap={2} style={{ minWidth: 200 }}>
+        <Stack gap={0}>
+          <Text size="sm" weight="bold">
+            {user?.displayName}
+          </Text>
+          <Text size="sm">{user?.username}</Text>
+        </Stack>
+        <Divider />
+        <Stack gap={1}>
+          <Button
+            className="atlas-account-item"
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setAccountOpen(false);
+              void navigate('/settings');
+            }}
+          >
+            Settings
+          </Button>
+          <Button
+            className="atlas-account-item"
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setAccountOpen(false);
+              logout.mutate();
+            }}
+          >
+            Sign out
+          </Button>
+        </Stack>
+      </Stack>
+    </Popover>
+  );
+
+  const searchButton = isMobile ? (
+    <Button variant="ghost" size="sm" aria-label="Search" onClick={() => setPaletteOpen(true)}>
+      <RiSearchLine aria-hidden />
+    </Button>
+  ) : (
+    <Button variant="ghost" size="sm" onClick={() => setPaletteOpen(true)}>
+      <Inline gap={2} align="center">
+        <span>Search</span>
+        <Kbd>Ctrl</Kbd>
+        <Kbd>K</Kbd>
+      </Inline>
+    </Button>
+  );
+
+  return (
+    <Inline className="atlas-shell" gap={0} align="stretch" wrap={false}>
       <a className="atlas-skip-link" href="#main-content">
         Skip to content
       </a>
 
-      <Sidebar aria-label="Main" collapsed={navCollapsed} onCollapsedChange={setNavCollapsed}>
-        <SidebarHeader>
-          <Inline
-            gap={2}
-            align="center"
-            justify={navCollapsed ? 'center' : 'start'}
-            wrap={false}
-            style={{ flex: 1, minWidth: 0 }}
-          >
-            <BrandMark size={24} />
-            {!navCollapsed && (
-              <Heading level={2} visualLevel={5}>
-                Atlas
-              </Heading>
-            )}
-          </Inline>
-        </SidebarHeader>
-        <SidebarBody>
-          <SideNav
-            aria-label="Sections"
-            collapsed={navCollapsed}
-            activeId={activeNavPath(location.pathname)}
-            items={NAV_ITEMS.map((item) => ({
-              id: item.path,
-              label: item.label,
-              icon: <item.Icon aria-hidden />,
-              onSelect: () => void navigate(item.path),
-            }))}
-          />
-        </SidebarBody>
-        <SidebarFooter>
-          <Inline
-            justify={navCollapsed ? 'center' : 'end'}
-            wrap={false}
-            style={{ width: '100%' }}
-          >
-            <SidebarTrigger />
-          </Inline>
-        </SidebarFooter>
-      </Sidebar>
+      {!isMobile ? (
+        <Sidebar aria-label="Main" collapsed={navCollapsed} onCollapsedChange={setNavCollapsed}>
+          <SidebarHeader>
+            <Inline
+              gap={2}
+              align="center"
+              justify={navCollapsed ? 'center' : 'start'}
+              wrap={false}
+              style={{ flex: 1, minWidth: 0 }}
+            >
+              <BrandMark size={24} />
+              {!navCollapsed && (
+                <Heading level={2} visualLevel={5}>
+                  Atlas
+                </Heading>
+              )}
+            </Inline>
+          </SidebarHeader>
+          <SidebarBody>
+            <SideNav
+              aria-label="Sections"
+              collapsed={navCollapsed}
+              activeId={activeNavPath(location.pathname)}
+              items={navItems}
+            />
+          </SidebarBody>
+          <SidebarFooter>
+            <Inline justify={navCollapsed ? 'center' : 'end'} wrap={false} style={{ width: '100%' }}>
+              <SidebarTrigger />
+            </Inline>
+          </SidebarFooter>
+        </Sidebar>
+      ) : null}
 
       <Box style={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
         <Box as="header" className="atlas-header" paddingX={5} paddingY={3}>
-          <Inline className="atlas-header-row" gap={3} align="center" justify="end" wrap={false}>
-            <Inline gap={3} align="center" wrap={false}>
-              <Button variant="ghost" size="sm" onClick={() => setPaletteOpen(true)}>
-                <Inline gap={2} align="center">
-                  <span>Search</span>
-                  <Kbd>Ctrl</Kbd>
-                  <Kbd>K</Kbd>
-                </Inline>
-              </Button>
+          <Inline
+            className="atlas-header-row"
+            gap={3}
+            align="center"
+            justify={isMobile ? 'between' : 'end'}
+            wrap={false}
+          >
+            {isMobile ? (
+              <Inline gap={2} align="center" wrap={false} style={{ minWidth: 0 }}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Open navigation"
+                  onClick={() => setNavOpen(true)}
+                >
+                  <RiMenuLine aria-hidden />
+                </Button>
+                <BrandMark size={22} />
+                <Heading level={2} visualLevel={5}>
+                  Atlas
+                </Heading>
+              </Inline>
+            ) : null}
 
-              <Popover
-                placement="bottom-end"
-                open={accountOpen}
-                onOpenChange={setAccountOpen}
-                trigger={
-                  <Button variant="ghost" size="sm" aria-label="Account menu">
-                    <Inline gap={2} align="center">
-                      <Avatar name={user?.displayName} size="sm" />
-                      <Text size="sm">{user?.displayName}</Text>
-                    </Inline>
-                  </Button>
-                }
-              >
-                <Stack gap={2} style={{ minWidth: 200 }}>
-                  <Stack gap={0}>
-                    <Text size="sm" weight="bold">
-                      {user?.displayName}
-                    </Text>
-                    <Text size="sm">{user?.username}</Text>
-                  </Stack>
-                  <Divider />
-                  <Stack gap={1}>
-                    <Button
-                      className="atlas-account-item"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setAccountOpen(false);
-                        void navigate('/settings');
-                      }}
-                    >
-                      Settings
-                    </Button>
-                    <Button
-                      className="atlas-account-item"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setAccountOpen(false);
-                        logout.mutate();
-                      }}
-                    >
-                      Sign out
-                    </Button>
-                  </Stack>
-                </Stack>
-              </Popover>
+            <Inline gap={3} align="center" wrap={false}>
+              {searchButton}
+              {accountMenu}
             </Inline>
           </Inline>
         </Box>
@@ -220,18 +259,39 @@ export function AppShell() {
         </Box>
       </Box>
 
-      {quickAddOpen ? (
-        <QuickAddModal
-          initialProjectId={quickAddProjectId}
-          onClose={() => setQuickAddOpen(false)}
-        />
+      {isMobile ? (
+        <Drawer
+          className="atlas-nav-drawer"
+          side="start"
+          size="sm"
+          isOpen={navOpen}
+          onClose={() => setNavOpen(false)}
+          showCloseButton
+          aria-label="Main navigation"
+        >
+          <DrawerHeader>
+            <Inline gap={2} align="center">
+              <BrandMark size={24} />
+              <Heading level={2} visualLevel={5}>
+                Atlas
+              </Heading>
+            </Inline>
+          </DrawerHeader>
+          <DrawerBody>
+            <SideNav
+              aria-label="Sections"
+              activeId={activeNavPath(location.pathname)}
+              items={navItems}
+            />
+          </DrawerBody>
+        </Drawer>
       ) : null}
 
-      <CommandBar
-        isOpen={paletteOpen}
-        onClose={() => setPaletteOpen(false)}
-        onQuickAdd={openQuickAdd}
-      />
+      {quickAddOpen ? (
+        <QuickAddModal initialProjectId={quickAddProjectId} onClose={() => setQuickAddOpen(false)} />
+      ) : null}
+
+      <CommandBar isOpen={paletteOpen} onClose={() => setPaletteOpen(false)} onQuickAdd={openQuickAdd} />
     </Inline>
   );
 }

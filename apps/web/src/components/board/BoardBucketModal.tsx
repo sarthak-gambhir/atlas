@@ -13,12 +13,15 @@ import {
   Text,
   type DataTableColumn,
 } from '@astrabound/duality';
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
+import type { ReactNode } from 'react';
 import type { TaskDto, TaskStatus } from '@atlas/shared';
 
-import { describeDueDate } from '../../lib/dates.ts';
+import { dueLabel } from '../../lib/dates.ts';
 import { BOARD_STATUSES, STATUS_LABELS } from '../../lib/labels.ts';
+import { useIsMobile } from '../../lib/useIsMobile.ts';
 import { ScoreCell } from '../ScoreCell.tsx';
+import { TaskMiniList } from '../TaskMiniList.tsx';
 
 interface BoardBucketModalProps {
   status: TaskStatus;
@@ -37,6 +40,30 @@ export function BoardBucketModal({
   onOpenTask,
   onMove,
 }: BoardBucketModalProps) {
+  const isMobile = useIsMobile();
+
+  const renderMove = useCallback(
+    (task: TaskDto): ReactNode => (
+      <Menu
+        aria-label={`Move ${task.title}`}
+        className="atlas-modal-menu"
+        placement="bottom-end"
+        trigger={
+          <Button size="sm" variant="inverse">
+            Move
+          </Button>
+        }
+      >
+        {BOARD_STATUSES.filter((option) => option !== status).map((option) => (
+          <MenuItem key={option} onSelect={() => onMove(task, option)}>
+            {STATUS_LABELS[option]}
+          </MenuItem>
+        ))}
+      </Menu>
+    ),
+    [status, onMove],
+  );
+
   const columns = useMemo<DataTableColumn<TaskDto>[]>(
     () => [
       {
@@ -57,49 +84,43 @@ export function BoardBucketModal({
       {
         id: 'due',
         header: 'Due',
-        value: (task) => task.dueDate ?? '',
+        value: (task) => dueLabel(task).date ?? '',
         sortable: true,
-        cell: (task) => (
-          <Text size="sm">{task.dueDate ? describeDueDate(task.dueDate, task.status) : '—'}</Text>
-        ),
+        cell: (task) => {
+          const label = dueLabel(task);
+          if (!label.date) return <Text size="sm">—</Text>;
+          return (
+            <Inline gap={1} align="center" wrap>
+              <Text size="sm">
+                {label.prefix} {label.phrase}
+              </Text>
+              {label.lateStart ? (
+                <Badge size="sm" variant="outline">
+                  Late start
+                </Badge>
+              ) : null}
+            </Inline>
+          );
+        },
       },
       {
         id: 'actions',
         header: '',
         align: 'end',
-        cell: (task) => (
-          // Stop the click bubbling to the row (which would navigate) while still
-          // letting the trigger's own click open the menu, so use the bubble
-          // phase rather than capture.
-          <div onClick={(event) => event.stopPropagation()}>
-            <Menu
-              aria-label={`Move ${task.title}`}
-              className="atlas-modal-menu"
-              placement="bottom-end"
-              trigger={
-                <Button size="sm" variant="inverse">
-                  Move
-                </Button>
-              }
-            >
-              {BOARD_STATUSES.filter((option) => option !== status).map((option) => (
-                <MenuItem key={option} onSelect={() => onMove(task, option)}>
-                  {STATUS_LABELS[option]}
-                </MenuItem>
-              ))}
-            </Menu>
-          </div>
-        ),
+        // Stop the click bubbling to the row (which would navigate) while still
+        // letting the trigger's own click open the menu, so use the bubble phase
+        // rather than capture.
+        cell: (task) => <div onClick={(event) => event.stopPropagation()}>{renderMove(task)}</div>,
       },
     ],
-    [status, onMove],
+    [renderMove],
   );
 
   return (
     <Modal
       isOpen
       onClose={onClose}
-      size="lg"
+      size={isMobile ? 'full' : 'lg'}
       showCloseButton
       aria-label={`${STATUS_LABELS[status]} tasks`}
     >
@@ -113,17 +134,21 @@ export function BoardBucketModal({
       </ModalHeader>
 
       <ModalBody>
-        <DataTable
-          aria-label={`${STATUS_LABELS[status]} tasks`}
-          className="atlas-actions-table atlas-fit-table"
-          columns={columns}
-          data={tasks}
-          getRowId={(task) => task.id}
-          filterable={false}
-          emptyMessage="Nothing here."
-          onRowClick={(task) => onOpenTask(task.id)}
-          pageSize={10}
-        />
+        {isMobile ? (
+          <TaskMiniList tasks={tasks} onOpen={onOpenTask} renderTrailing={renderMove} />
+        ) : (
+          <DataTable
+            aria-label={`${STATUS_LABELS[status]} tasks`}
+            className="atlas-actions-table atlas-fit-table"
+            columns={columns}
+            data={tasks}
+            getRowId={(task) => task.id}
+            filterable={false}
+            emptyMessage="Nothing here."
+            onRowClick={(task) => onOpenTask(task.id)}
+            pageSize={10}
+          />
+        )}
       </ModalBody>
 
       <ModalFooter>

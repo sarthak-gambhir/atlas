@@ -41,8 +41,11 @@ function toDto(row: TaskRow, tagNames: string[], ctx: ScoringContext): TaskDto {
     impact: row.impact,
     effort: row.effort,
     confidence: row.confidence,
-    dueDate: row.dueDate,
+    status: row.status,
+    dueStartDate: row.dueStartDate,
+    dueEndDate: row.dueEndDate,
     urgencyOverride: row.urgencyOverride,
+    completedAt: row.completedAt ? row.completedAt.toISOString().slice(0, 10) : null,
   };
   const score = computeScore(inputs, ctx.settings, ctx.today);
 
@@ -57,8 +60,8 @@ function toDto(row: TaskRow, tagNames: string[], ctx: ScoringContext): TaskDto {
     effort: row.effort,
     confidence: row.confidence,
     urgencyOverride: row.urgencyOverride,
-    dueDate: row.dueDate,
-    estimateHours: row.estimateHours,
+    dueStartDate: row.dueStartDate,
+    dueEndDate: row.dueEndDate,
     manualRank: row.manualRank,
     tags: tagNames,
     createdAt: row.createdAt.toISOString(),
@@ -98,7 +101,7 @@ function buildFilters(db: Database, filter: TaskFilter, viewer: TaskViewer): SQL
 
   if (filter.projectId) conditions.push(eq(tasks.projectId, filter.projectId));
   if (filter.assigneeId) conditions.push(eq(tasks.assigneeId, filter.assigneeId));
-  if (filter.dueBefore) conditions.push(lte(tasks.dueDate, filter.dueBefore));
+  if (filter.dueBefore) conditions.push(lte(tasks.dueEndDate, filter.dueBefore));
 
   if (filter.q) {
     const pattern = `%${filter.q}%`;
@@ -235,8 +238,8 @@ export async function createTask(
       effort: input.effort ?? 3,
       confidence: input.confidence ?? 1,
       urgencyOverride: input.urgencyOverride ?? null,
-      dueDate: input.dueDate ?? null,
-      estimateHours: input.estimateHours ?? null,
+      dueStartDate: input.dueStartDate ?? null,
+      dueEndDate: input.dueEndDate ?? null,
       createdBy,
     });
 
@@ -264,8 +267,8 @@ export async function updateTask(
   if (input.effort !== undefined) patch.effort = input.effort;
   if (input.confidence !== undefined) patch.confidence = input.confidence;
   if (input.urgencyOverride !== undefined) patch.urgencyOverride = input.urgencyOverride ?? null;
-  if (input.dueDate !== undefined) patch.dueDate = input.dueDate ?? null;
-  if (input.estimateHours !== undefined) patch.estimateHours = input.estimateHours ?? null;
+  if (input.dueStartDate !== undefined) patch.dueStartDate = input.dueStartDate ?? null;
+  if (input.dueEndDate !== undefined) patch.dueEndDate = input.dueEndDate ?? null;
   if (input.manualRank !== undefined) patch.manualRank = input.manualRank ?? null;
 
   if (input.status !== undefined) {

@@ -141,6 +141,7 @@ function ScoringForm({ saved, canEdit }: { saved: ScoringSettings; canEdit: bool
       const weights = { ...previous.weights, [key]: value };
       const max = axisMaxFor(weights);
       return {
+        ...previous,
         weights,
         thresholds: {
           now: Math.min(previous.thresholds.now, max),
@@ -160,8 +161,11 @@ function ScoringForm({ saved, canEdit }: { saved: ScoringSettings; canEdit: bool
       impact: sample.impact,
       effort: sample.effort,
       confidence: sample.confidence,
-      dueDate: null,
+      status: 'backlog',
+      dueStartDate: null,
+      dueEndDate: null,
       urgencyOverride: sample.urgency,
+      completedAt: null,
     },
     draft,
   );
@@ -294,17 +298,7 @@ function BucketThresholdEditor({
           Set bucket minimum scores
         </Heading>
         <Stack gap={4}>
-          <Box
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'max-content 200px',
-              columnGap: '2rem',
-              rowGap: '0.75rem',
-              alignItems: 'center',
-            }}
-            paddingX={2}
-            paddingY={4}
-          >
+          <Box className="atlas-bucket-grid" paddingX={2} paddingY={4}>
             <Text size="sm" weight="bold">
               Bucket
             </Text>

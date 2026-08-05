@@ -61,7 +61,9 @@ export function FilterBar({
           options={[
             { value: '', label: 'Any project' },
             ...(projects ?? [])
-              .filter((project) => facets.projectIds.has(project.id) || project.id === state.projectId)
+              .filter(
+                (project) => facets.projectIds.has(project.id) || project.id === state.projectId,
+              )
               .map((project) => ({ value: project.id, label: project.name })),
           ]}
           onValueChange={(value) => set({ projectId: value })}
@@ -101,10 +103,10 @@ export function FilterBar({
         <Inline gap={2} align="center">
           {showClosedToggle ? (
             <Button
-              variant={state.includeClosed ? 'solid' : 'inverse'}
+              variant={'inverse'}
               onClick={() => set({ includeClosed: !state.includeClosed })}
             >
-              Show closed
+              {state.includeClosed ? 'Hide closed' : 'Show closed'}
             </Button>
           ) : null}
 

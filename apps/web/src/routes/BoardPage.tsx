@@ -48,7 +48,7 @@ export function BoardPage() {
     const open = all.filter((task) => !CLOSED_STATUSES.includes(task.status));
     return {
       open: open.length,
-      overdue: open.filter((task) => task.dueDate != null && task.dueDate < today).length,
+      overdue: open.filter((task) => task.dueEndDate != null && task.dueEndDate < today).length,
       done: all.filter((task) => task.status === 'done').length,
     };
   }, [tasks]);

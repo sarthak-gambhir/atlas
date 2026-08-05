@@ -6,6 +6,7 @@ import {
   compareForBacklog,
   computeScore,
   daysBetween,
+  relevantDue,
   toIsoDate,
   urgencyFor,
   type RankableTask,
@@ -19,8 +20,11 @@ function task(overrides: Partial<ScoreInputs> = {}): ScoreInputs {
     impact: 3,
     effort: 3,
     confidence: 1,
-    dueDate: null,
+    status: 'backlog',
+    dueStartDate: null,
+    dueEndDate: null,
     urgencyOverride: null,
+    completedAt: null,
     ...overrides,
   };
 }
@@ -52,6 +56,38 @@ describe('daysBetween', () => {
   });
 });
 
+describe('relevantDue', () => {
+  it('watches the start date before work begins', () => {
+    expect(relevantDue('backlog', '2026-08-01', '2026-08-10')).toEqual({
+      date: '2026-08-01',
+      kind: 'start',
+    });
+    expect(relevantDue('next', null, '2026-08-10')).toEqual({ date: '2026-08-10', kind: 'due' });
+  });
+
+  it('ignores the start date once work has started', () => {
+    expect(relevantDue('in_progress', '2026-08-01', '2026-08-10')).toEqual({
+      date: '2026-08-10',
+      kind: 'due',
+    });
+    expect(relevantDue('blocked', '2026-08-01', null)).toEqual({
+      date: '2026-08-01',
+      kind: 'due',
+    });
+  });
+
+  it('shows the due date for closed tasks', () => {
+    expect(relevantDue('done', '2026-08-01', '2026-08-10')).toEqual({
+      date: '2026-08-10',
+      kind: 'due',
+    });
+    expect(relevantDue('archived', '2026-08-01', null)).toEqual({
+      date: '2026-08-01',
+      kind: 'due',
+    });
+  });
+});
+
 describe('urgencyFor', () => {
   it('puts undated work at the floor', () => {
     expect(urgencyFor(null, null, TODAY)).toBe(1);
@@ -62,14 +98,14 @@ describe('urgencyFor', () => {
     expect(urgencyFor(TODAY, null, TODAY)).toBe(5);
   });
 
-  it('steps down as the due date recedes', () => {
+  it('steps down as the relevant date recedes', () => {
     expect(urgencyFor('2026-07-31', null, TODAY)).toBe(4); // 3 days
     expect(urgencyFor('2026-08-04', null, TODAY)).toBe(3); // 7 days
     expect(urgencyFor('2026-08-27', null, TODAY)).toBe(2); // 30 days
     expect(urgencyFor('2026-09-30', null, TODAY)).toBe(1); // beyond a month
   });
 
-  it('lets an override win over the due date', () => {
+  it('lets an override win over the date', () => {
     expect(urgencyFor('2027-01-01', 5, TODAY)).toBe(5);
     expect(urgencyFor(TODAY, 1, TODAY)).toBe(1);
   });
@@ -88,7 +124,7 @@ describe('computeScore', () => {
   });
 
   it('scales down with confidence', () => {
-    const base = task({ impact: 5, effort: 1, dueDate: TODAY });
+    const base = task({ impact: 5, effort: 1, dueEndDate: TODAY });
     const sure = computeScore({ ...base, confidence: 1 }, DEFAULT_SCORING, TODAY);
     const unsure = computeScore({ ...base, confidence: 0.5 }, DEFAULT_SCORING, TODAY);
     expect(sure).toBe(10);
@@ -96,12 +132,12 @@ describe('computeScore', () => {
   });
 
   it('tops out at 10 for maximum value and minimum cost', () => {
-    const best = task({ impact: 5, effort: 1, confidence: 1, dueDate: TODAY });
+    const best = task({ impact: 5, effort: 1, confidence: 1, dueEndDate: TODAY });
     expect(computeScore(best, DEFAULT_SCORING, TODAY)).toBe(10);
   });
 
   it('honours reweighting', () => {
-    const dated = task({ impact: 1, dueDate: TODAY });
+    const dated = task({ impact: 1, dueEndDate: TODAY });
     const balanced = computeScore(dated, DEFAULT_SCORING, TODAY);
     const urgencyLed = computeScore(
       dated,
@@ -111,12 +147,48 @@ describe('computeScore', () => {
     expect(urgencyLed).toBeGreaterThan(balanced);
   });
 
+  it('keys off the start date until work begins, then the due date', () => {
+    // A passed start date pegs urgency high while the task sits in the backlog.
+    const backlog = task({
+      status: 'backlog',
+      dueStartDate: '2026-07-01',
+      dueEndDate: '2026-09-30',
+    });
+    // Once started, the past start is ignored and the far due date takes over,
+    // lowering urgency (and so the score).
+    const started = { ...backlog, status: 'in_progress' as const };
+    expect(computeScore(started, DEFAULT_SCORING, TODAY)).toBeLessThan(
+      computeScore(backlog, DEFAULT_SCORING, TODAY),
+    );
+  });
+
+  it('freezes a done task at its completion date', () => {
+    // Completed the day before its deadline: frozen, that deadline was still a
+    // day out (urgency 4), not the ceiling it would hit against today.
+    const done = task({ status: 'done', dueEndDate: '2026-01-02', completedAt: '2026-01-01' });
+    const frozen = computeScore(done, DEFAULT_SCORING, TODAY);
+    const asOpen = computeScore(
+      { ...done, status: 'in_progress', completedAt: null },
+      DEFAULT_SCORING,
+      TODAY,
+    );
+    expect(frozen).toBeLessThan(asOpen);
+  });
+
+  it('drops an archived-uncompleted task to the urgency floor', () => {
+    const late = task({ status: 'archived', dueEndDate: '2000-01-01', completedAt: null });
+    const undated = task({ status: 'archived', dueEndDate: null, completedAt: null });
+    expect(computeScore(late, DEFAULT_SCORING, TODAY)).toBe(
+      computeScore(undated, DEFAULT_SCORING, TODAY),
+    );
+  });
+
   it('never divides by zero', () => {
     expect(Number.isFinite(computeScore(task({ effort: 0 }), DEFAULT_SCORING, TODAY))).toBe(true);
   });
 
   it('defaults today to the current UTC date', () => {
-    const overdue = task({ dueDate: '2000-01-01' });
+    const overdue = task({ dueEndDate: '2000-01-01' });
     expect(computeScore(overdue)).toBe(computeScore(overdue, DEFAULT_SCORING, toIsoDate(new Date())));
   });
 });
@@ -154,9 +226,9 @@ describe('compareForBacklog', () => {
     expect(sorted([second, first])).toEqual(['first', 'second']);
   });
 
-  it('breaks score ties with the nearest due date', () => {
-    const soon = rankable('soon', { dueDate: '2026-08-04', urgencyOverride: 3 });
-    const later = rankable('later', { dueDate: '2026-08-05', urgencyOverride: 3 });
+  it('breaks score ties with the nearest relevant date', () => {
+    const soon = rankable('soon', { dueEndDate: '2026-08-04', urgencyOverride: 3 });
+    const later = rankable('later', { dueEndDate: '2026-08-05', urgencyOverride: 3 });
     expect(sorted([later, soon])).toEqual(['soon', 'later']);
   });
 
@@ -171,7 +243,7 @@ describe('compareForBacklog', () => {
       rankable('a', { impact: 4, effort: 2 }),
       rankable('b', { impact: 2, effort: 1, manualRank: 5 }),
       rankable('c', { impact: 4, effort: 2, createdAt: '2025-01-01T00:00:00.000Z' }),
-      rankable('d', { impact: 1, effort: 4, dueDate: TODAY }),
+      rankable('d', { impact: 1, effort: 4, dueEndDate: TODAY }),
     ];
     const expected = sorted(tasks);
     expect(sorted([...tasks].reverse())).toEqual(expected);

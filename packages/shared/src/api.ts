@@ -51,7 +51,7 @@ export const isoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected a
 const levelSchema = z.number().int().min(1).max(5);
 const tagNameSchema = z.string().trim().min(1).max(50);
 
-export const createTaskSchema = z.object({
+export const taskInputSchema = z.object({
   title: z.string().trim().min(1).max(200),
   notes: z.string().max(10_000).nullish(),
   status: taskStatusSchema.optional(),
@@ -61,15 +61,26 @@ export const createTaskSchema = z.object({
   effort: levelSchema.optional(),
   confidence: confidenceSchema.optional(),
   urgencyOverride: levelSchema.nullish(),
-  dueDate: isoDateSchema.nullish(),
-  estimateHours: z.number().min(0).max(10_000).nullish(),
+  dueStartDate: isoDateSchema.nullish(),
+  dueEndDate: isoDateSchema.nullish(),
   tags: z.array(tagNameSchema).max(20).optional(),
 });
+
+/** ISO date-only strings sort chronologically, so a lexical compare is enough. */
+const datesInOrder = (value: { dueStartDate?: string | null; dueEndDate?: string | null }): boolean =>
+  value.dueStartDate == null || value.dueEndDate == null || value.dueStartDate <= value.dueEndDate;
+const datesInOrderIssue = {
+  message: 'Start date must be on or before the due date.',
+  path: ['dueStartDate'],
+};
+
+export const createTaskSchema = taskInputSchema.refine(datesInOrder, datesInOrderIssue);
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 
-export const updateTaskSchema = createTaskSchema.partial().extend({
-  manualRank: z.number().nullish(),
-});
+export const updateTaskSchema = taskInputSchema
+  .partial()
+  .extend({ manualRank: z.number().nullish() })
+  .refine(datesInOrder, datesInOrderIssue);
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;
 
 /** How many tasks one bulk request may touch. */
@@ -82,7 +93,7 @@ export const bulkUpdateSchema = z.object({
    * applied to a hundred tasks as to one; impact, effort, confidence and due
    * dates are per-task judgements and stay out of bulk edits.
    */
-  patch: createTaskSchema
+  patch: taskInputSchema
     .pick({ status: true, projectId: true, assigneeId: true })
     .refine((patch) => Object.keys(patch).length > 0, {
       message: 'Choose at least one field to change.',
@@ -249,8 +260,10 @@ export const exportedTaskSchema = z.object({
   effort: levelSchema,
   confidence: confidenceSchema,
   urgencyOverride: levelSchema.nullish(),
+  dueStartDate: isoDateSchema.nullish(),
+  dueEndDate: isoDateSchema.nullish(),
+  /** Legacy single due date from older backups; imported as the end date. */
   dueDate: isoDateSchema.nullish(),
-  estimateHours: z.number().min(0).max(10_000).nullish(),
   manualRank: z.number().nullish(),
   tags: z.array(tagNameSchema).max(20),
   createdAt: z.string().optional(),
@@ -347,8 +360,8 @@ export interface TaskDto {
   effort: number;
   confidence: number;
   urgencyOverride: number | null;
-  dueDate: string | null;
-  estimateHours: number | null;
+  dueStartDate: string | null;
+  dueEndDate: string | null;
   manualRank: number | null;
   tags: string[];
   createdAt: string;

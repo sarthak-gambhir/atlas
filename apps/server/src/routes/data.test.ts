@@ -48,7 +48,7 @@ async function seedContent() {
       projectId,
       impact: 5,
       effort: 2,
-      dueDate: '2026-09-01',
+      dueEndDate: '2026-09-01',
       tags: ['infra', 'urgent'],
     },
   });
@@ -86,7 +86,7 @@ describe('GET /api/export', () => {
       project: 'Website',
       impact: 5,
       effort: 2,
-      dueDate: '2026-09-01',
+      dueEndDate: '2026-09-01',
       status: 'backlog',
     });
     expect(shipped?.tags.toSorted()).toEqual(['infra', 'urgent']);

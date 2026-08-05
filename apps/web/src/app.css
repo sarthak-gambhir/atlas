@@ -336,3 +336,121 @@ button.atlas-matrix-tile:hover {
   outline: var(--border-width) solid var(--fg);
   outline-offset: 2px;
 }
+
+/* A record card is the phone-layout replacement for one table row: a bordered
+ * block that (when it stands in for a clickable row) is itself the tap target. */
+.atlas-record-card {
+  display: block;
+  inline-size: 100%;
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--fg);
+  background: var(--bg);
+  color: var(--fg);
+}
+
+/* When the card is the tap target (task rows navigate on click). */
+button.atlas-record-card,
+a.atlas-record-card {
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+button.atlas-record-card:focus-visible,
+a.atlas-record-card:focus-visible {
+  outline: var(--border-width) solid var(--fg);
+  outline-offset: 2px;
+}
+
+/* The backlog task card (phone layout): a leading accent column (selection,
+ * score, bucket) with a solid seam, beside a body that owns the title, meta and
+ * action. The whole card is the tap target that opens the task. */
+.atlas-task-card {
+  display: flex;
+  align-items: stretch;
+  inline-size: 100%;
+  border: var(--border-width) solid var(--fg);
+  background: var(--bg);
+  color: var(--fg);
+  text-align: start;
+  cursor: pointer;
+}
+
+.atlas-task-card:focus-visible {
+  outline: var(--border-width) solid var(--fg);
+  outline-offset: 2px;
+}
+
+.atlas-task-card__accent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-inline-end: var(--border-width) solid var(--fg);
+}
+
+.atlas-task-card__body {
+  flex: 1;
+  /* Let long titles wrap instead of stretching the card past the viewport. */
+  min-inline-size: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Each stacked band of the body is its own isolated section, split from the
+ * next by the same solid seam used elsewhere in the two-color theme. */
+.atlas-task-card__section {
+  padding: var(--space-2) var(--space-3);
+}
+
+.atlas-task-card__section + .atlas-task-card__section {
+  border-block-start: var(--border-width) solid var(--fg);
+}
+
+/* The facts band: label-over-value pairs in a two-column grid so each fact reads
+ * as its own labelled unit rather than a run-on line. */
+.atlas-task-card__facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.atlas-task-card__fact {
+  display: flex;
+  flex-direction: column;
+}
+
+/* The bucket-threshold editor: a label column sized to its content and a bounded
+ * input column that shrinks (minmax floor of 0) so it never overflows a phone. */
+.atlas-bucket-grid {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 200px);
+  column-gap: 2rem;
+  row-gap: 0.75rem;
+  align-items: center;
+}
+
+/* Phone layout: the sidebar is gone (a Drawer takes over), so tighten the shell
+ * padding and let the nav drawer's list breathe. */
+@media (max-width: 767.98px) {
+  .atlas-bucket-grid {
+    column-gap: var(--space-3);
+  }
+
+  /* Box paddingX={5}/paddingY on the header and main are too generous once the
+   * screen is ~375px wide; pull them in to a single step. */
+  .atlas-header {
+    padding-inline: var(--space-3);
+  }
+
+  .atlas-main {
+    padding: var(--space-3);
+  }
+}
+
+/* The nav drawer's body holds the SideNav full-bleed. */
+.atlas-nav-drawer .du_drawer_body {
+  padding: var(--space-2);
+}

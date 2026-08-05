@@ -28,7 +28,7 @@ import { useState, type FormEvent } from 'react';
 
 import { BucketBadge } from './BucketBadge.tsx';
 import { formatIsoDate, parseIsoDate, todayIso } from '../lib/dates.ts';
-import { CONFIDENCE_LABELS } from '../lib/labels.ts';
+import { CONFIDENCE_LABELS, URGENCY_OPTIONS } from '../lib/labels.ts';
 import { canEditProject, useProjects, useUsers } from '../lib/organization.ts';
 import { useSession } from '../lib/session.ts';
 import { useCreateTask, useScoringSettings } from '../lib/tasks.ts';
@@ -82,7 +82,9 @@ export function QuickAddModal({ onClose, initialProjectId = '' }: QuickAddModalP
   const [impact, setImpact] = useState(initial.impact);
   const [effort, setEffort] = useState(initial.effort);
   const [confidence, setConfidence] = useState<Confidence>(initial.confidence);
-  const [dueDate, setDueDate] = useState<string | null>(null);
+  const [urgencyOverride, setUrgencyOverride] = useState<number | null>(null);
+  const [dueStartDate, setDueStartDate] = useState<string | null>(null);
+  const [dueEndDate, setDueEndDate] = useState<string | null>(null);
   const [tags, setTags] = useState<string[]>(initial.tags);
   const [projectId, setProjectId] = useState(safeInitialId);
   const [assigneeId, setAssigneeId] = useState(initial.assigneeId);
@@ -110,7 +112,16 @@ export function QuickAddModal({ onClose, initialProjectId = '' }: QuickAddModalP
   };
 
   const preview = computeScore(
-    { impact, effort, confidence, dueDate, urgencyOverride: null },
+    {
+      impact,
+      effort,
+      confidence,
+      status: 'backlog',
+      dueStartDate,
+      dueEndDate,
+      urgencyOverride,
+      completedAt: null,
+    },
     scoring,
     todayIso(),
   );
@@ -123,7 +134,9 @@ export function QuickAddModal({ onClose, initialProjectId = '' }: QuickAddModalP
         impact,
         effort,
         confidence,
-        dueDate,
+        urgencyOverride,
+        dueStartDate,
+        dueEndDate,
         tags,
         projectId: projectId === '' ? null : projectId,
         assigneeId: assigneeId === '' ? null : assigneeId,
@@ -205,25 +218,46 @@ export function QuickAddModal({ onClose, initialProjectId = '' }: QuickAddModalP
               </FormField>
             </Inline>
 
-            <FormField label="Confidence">
-              <Select
-                value={String(confidence)}
-                options={CONFIDENCE_VALUES.map((value) => ({
-                  value: String(value),
-                  label: CONFIDENCE_LABELS[String(value)] ?? String(value),
-                }))}
-                onValueChange={(value) => setConfidence(toConfidence(Number(value)))}
-              />
-            </FormField>
+            <Inline gap={3} align="start">
+              <FormField label="Confidence">
+                <Select
+                  value={String(confidence)}
+                  options={CONFIDENCE_VALUES.map((value) => ({
+                    value: String(value),
+                    label: CONFIDENCE_LABELS[String(value)] ?? String(value),
+                  }))}
+                  onValueChange={(value) => setConfidence(toConfidence(Number(value)))}
+                />
+              </FormField>
 
-            <FormField label="Due date">
-              <DatePicker
-                value={parseIsoDate(dueDate)}
-                clearable
-                placeholder="No due date"
-                onValueChange={(value) => setDueDate(formatIsoDate(value))}
-              />
-            </FormField>
+              <FormField label="Urgency" hint="Auto uses the due date">
+                <Select
+                  value={urgencyOverride == null ? '' : String(urgencyOverride)}
+                  options={URGENCY_OPTIONS}
+                  onValueChange={(value) => setUrgencyOverride(value === '' ? null : Number(value))}
+                />
+              </FormField>
+            </Inline>
+
+            <Inline gap={3} align="start">
+              <FormField label="Start date" hint="Drives urgency before you start">
+                <DatePicker
+                  value={parseIsoDate(dueStartDate)}
+                  clearable
+                  placeholder="No start date"
+                  onValueChange={(value) => setDueStartDate(formatIsoDate(value))}
+                />
+              </FormField>
+
+              <FormField label="Due date" hint="Drives urgency once started">
+                <DatePicker
+                  value={parseIsoDate(dueEndDate)}
+                  clearable
+                  placeholder="No due date"
+                  onValueChange={(value) => setDueEndDate(formatIsoDate(value))}
+                />
+              </FormField>
+            </Inline>
 
             <FormField label="Tags">
               <TagInput value={tags} onValueChange={setTags} placeholder="Add a tag" />

@@ -4,6 +4,8 @@
  * can never drift out of date as a due date approaches.
  */
 
+import { CLOSED_STATUSES, type TaskStatus } from './domain.ts';
+
 /** Allowed confidence multipliers: none, low, medium, high. */
 export const CONFIDENCE_VALUES = [0, 0.5, 0.8, 1] as const;
 export type Confidence = (typeof CONFIDENCE_VALUES)[number];
@@ -46,10 +48,35 @@ export interface ScoreInputs {
   effort: number;
   /** Multiplier for how sure we are, one of CONFIDENCE_VALUES. */
   confidence: number;
-  /** Date-only ISO string (YYYY-MM-DD), or null when undated. */
-  dueDate: string | null;
-  /** Pins urgency to an explicit level, bypassing the due date. */
+  /** Where the task sits in its lifecycle; picks the date urgency keys off. */
+  status: TaskStatus;
+  /** When work should begin. Date-only ISO string, or null. */
+  dueStartDate: string | null;
+  /** When work must finish. Date-only ISO string, or null. */
+  dueEndDate: string | null;
+  /** Pins urgency to an explicit level, bypassing the dates. */
   urgencyOverride: number | null;
+  /** When the task was completed; freezes closed-task urgency. */
+  completedAt: string | null;
+}
+
+/** Which date drives urgency and display for a task, and which milestone it is. */
+export function relevantDue(
+  status: TaskStatus,
+  dueStartDate: string | null,
+  dueEndDate: string | null,
+): { date: string | null; kind: 'start' | 'due' } {
+  // Once work has started, the start date is behind us: only the deadline matters.
+  const started = status === 'in_progress' || status === 'blocked';
+  const closed = (CLOSED_STATUSES as readonly string[]).includes(status);
+  if (started || closed) {
+    return { date: dueEndDate ?? dueStartDate, kind: 'due' };
+  }
+  // Not yet started (backlog/next): the start date is the thing to watch, but a
+  // bare deadline still counts.
+  return dueStartDate != null
+    ? { date: dueStartDate, kind: 'start' }
+    : { date: dueEndDate, kind: 'due' };
 }
 
 const MS_PER_DAY = 86_400_000;
@@ -73,20 +100,21 @@ export function daysBetween(from: string, to: string): number {
 }
 
 /**
- * Urgency rises as the due date approaches. Undated work sits at the floor so
- * it never crowds out dated work of equal impact.
+ * Urgency rises as the relevant date approaches. An override wins outright.
+ * Undated work sits at the floor so it never crowds out dated work of equal
+ * impact.
  */
 export function urgencyFor(
-  dueDate: string | null,
+  relevantDate: string | null,
   urgencyOverride: number | null,
   today: string,
 ): UrgencyLevel {
   if (urgencyOverride != null) {
     return clampLevel(urgencyOverride);
   }
-  if (dueDate == null) return 1;
+  if (relevantDate == null) return 1;
 
-  const days = daysBetween(today, dueDate);
+  const days = daysBetween(today, relevantDate);
   if (days <= 0) return 5; // overdue or due today
   if (days <= 3) return 4;
   if (days <= 7) return 3;
@@ -110,7 +138,16 @@ export function computeScore(
   settings: ScoringSettings = DEFAULT_SCORING,
   today: string = toIsoDate(new Date()),
 ): number {
-  const urgency = urgencyFor(task.dueDate, task.urgencyOverride, today);
+  const closed = (CLOSED_STATUSES as readonly string[]).includes(task.status);
+  // A closed task freezes its urgency at completion so a passing deadline can no
+  // longer inflate it; an archived task that was never completed drops to the
+  // floor. Open tasks measure against today.
+  const reference = closed ? task.completedAt : today;
+  const relevantDate =
+    closed && task.completedAt == null
+      ? null
+      : relevantDue(task.status, task.dueStartDate, task.dueEndDate).date;
+  const urgency = urgencyFor(relevantDate, task.urgencyOverride, reference ?? today);
   const { impact, urgency: urgencyWeight } = settings.weights;
   const effort = task.effort > 0 ? task.effort : 1;
   const raw = ((task.impact * impact + urgency * urgencyWeight) * task.confidence) / effort;
@@ -153,10 +190,14 @@ export function compareForBacklog(
   const scoreDelta = computeScore(b, settings, today) - computeScore(a, settings, today);
   if (scoreDelta !== 0) return scoreDelta;
 
-  if (a.dueDate !== b.dueDate) {
-    if (a.dueDate == null) return 1;
-    if (b.dueDate == null) return -1;
-    return a.dueDate < b.dueDate ? -1 : 1;
+  // Break score ties by whichever must be acted on first: its relevant date,
+  // falling back to the deadline.
+  const aDue = relevantDue(a.status, a.dueStartDate, a.dueEndDate).date ?? a.dueEndDate;
+  const bDue = relevantDue(b.status, b.dueStartDate, b.dueEndDate).date ?? b.dueEndDate;
+  if (aDue !== bDue) {
+    if (aDue == null) return 1;
+    if (bDue == null) return -1;
+    return aDue < bDue ? -1 : 1;
   }
 
   if (a.createdAt !== b.createdAt) return a.createdAt < b.createdAt ? -1 : 1;

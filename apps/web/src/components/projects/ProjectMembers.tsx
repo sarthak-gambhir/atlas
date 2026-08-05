@@ -2,6 +2,7 @@ import {
   Avatar,
   Badge,
   Button,
+  Checkbox,
   ConfirmDialog,
   DataTable,
   Inline,
@@ -14,7 +15,7 @@ import {
   type DataTableColumn,
 } from '@astrabound/duality';
 import type { ProjectDto, ProjectMemberRole, UserSummaryDto } from '@atlas/shared';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { RiMore2Fill } from 'react-icons/ri';
 
 import {
@@ -26,6 +27,7 @@ import {
   useUsers,
 } from '../../lib/organization.ts';
 import { useSession } from '../../lib/session.ts';
+import { useIsMobile } from '../../lib/useIsMobile.ts';
 
 const ROLE_LABELS: Record<'owner' | ProjectMemberRole, string> = {
   owner: 'Owner',
@@ -43,6 +45,7 @@ interface ProjectMembersProps {
 export function ProjectMembers({ project, canManage }: ProjectMembersProps) {
   const { data: users } = useUsers();
   const { data: session } = useSession();
+  const isMobile = useIsMobile();
   const addMember = useAddProjectMember();
   const removeMember = useRemoveProjectMember();
   const transferOwnership = useTransferProjectOwnership();
@@ -152,6 +155,35 @@ export function ProjectMembers({ project, canManage }: ProjectMembersProps) {
     );
   };
 
+  // The per-member action menu, shared by the desktop table and mobile cards.
+  const renderMemberActions = (member: UserSummaryDto): ReactNode => {
+    if (!canManage || member.id === project.ownerId) return null;
+    const role = projectRoleFor(project, member.id) ?? 'editor';
+    return (
+      <Menu
+        placement="bottom-end"
+        trigger={
+          <Button
+            variant="inverse"
+            size="sm"
+            aria-label={`Actions for ${member.displayName}`}
+            className="atlas-action-menu-button"
+          >
+            <RiMore2Fill aria-hidden />
+          </Button>
+        }
+      >
+        {role === 'viewer' ? (
+          <MenuItem onSelect={() => changeRole(member, 'editor')}>Make editor</MenuItem>
+        ) : (
+          <MenuItem onSelect={() => changeRole(member, 'viewer')}>Make viewer</MenuItem>
+        )}
+        <MenuItem onSelect={() => setTransferring(member)}>Make owner</MenuItem>
+        <MenuItem onSelect={() => setRemoving(member)}>Remove</MenuItem>
+      </Menu>
+    );
+  };
+
   const columns = useMemo<DataTableColumn<UserSummaryDto>[]>(() => {
     const base: DataTableColumn<UserSummaryDto>[] = [
       {
@@ -207,36 +239,10 @@ export function ProjectMembers({ project, canManage }: ProjectMembersProps) {
         id: 'actions',
         header: '',
         align: 'end',
-        cell: (member) => {
-          if (member.id === project.ownerId) return null;
-          const role = projectRoleFor(project, member.id) ?? 'editor';
-          return (
-            <Menu
-              placement="bottom-end"
-              trigger={
-                <Button
-                  variant="inverse"
-                  size="sm"
-                  aria-label={`Actions for ${member.displayName}`}
-                  className="atlas-action-menu-button"
-                >
-                  <RiMore2Fill aria-hidden />
-                </Button>
-              }
-            >
-              {role === 'viewer' ? (
-                <MenuItem onSelect={() => changeRole(member, 'editor')}>Make editor</MenuItem>
-              ) : (
-                <MenuItem onSelect={() => changeRole(member, 'viewer')}>Make viewer</MenuItem>
-              )}
-              <MenuItem onSelect={() => setTransferring(member)}>Make owner</MenuItem>
-              <MenuItem onSelect={() => setRemoving(member)}>Remove</MenuItem>
-            </Menu>
-          );
-        },
+        cell: (member) => renderMemberActions(member),
       },
     ];
-    // changeRole is stable enough for the menu; project drives the visible role.
+    // renderMemberActions closes over stable handlers; project drives the role.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canManage, project, session?.id]);
 
@@ -270,20 +276,77 @@ export function ProjectMembers({ project, canManage }: ProjectMembersProps) {
         </Inline>
       ) : null}
 
-      <DataTable
-        aria-label={`Members of ${project.name}`}
-        className={canManage ? 'atlas-actions-table' : undefined}
-        columns={columns}
-        data={members}
-        getRowId={(member) => member.id}
-        filterable={true}
-        filterPlaceholder="Search members"
-        emptyMessage="No members yet."
-        selectable={canManage}
-        selectedIds={canManage ? selectedIds : undefined}
-        onSelectionChange={canManage ? (ids) => setSelectedIds(ids.map(String)) : undefined}
-        pageSize={10}
-      />
+      {isMobile ? (
+        members.length === 0 ? (
+          <Text size="sm">No members yet.</Text>
+        ) : (
+          <Stack gap={2}>
+            {members.map((member) => {
+              const role = projectRoleFor(project, member.id) ?? 'editor';
+              const isOwner = member.id === project.ownerId;
+              return (
+                <div key={member.id} className="atlas-record-card">
+                  <Stack gap={2}>
+                    <Inline gap={2} align="start" justify="between" wrap={false}>
+                      <Inline gap={3} align="center" style={{ minWidth: 0 }}>
+                        {canManage && !isOwner ? (
+                          <Checkbox
+                            aria-label={`Select ${member.displayName}`}
+                            checked={selectedIds.includes(member.id)}
+                            onChange={(event) =>
+                              setSelectedIds((prev) =>
+                                event.target.checked
+                                  ? [...new Set([...prev, member.id])]
+                                  : prev.filter((id) => id !== member.id),
+                              )
+                            }
+                          />
+                        ) : null}
+                        <Avatar name={member.displayName} size="sm" />
+                        <Stack gap={0}>
+                          <Inline gap={2} align="center">
+                            <Text weight="bold">{member.displayName}</Text>
+                            {member.id === session?.id ? (
+                              <Badge variant="outline" size="sm">
+                                You
+                              </Badge>
+                            ) : null}
+                            {member.disabled ? (
+                              <Badge variant="outline" size="sm">
+                                Disabled
+                              </Badge>
+                            ) : null}
+                          </Inline>
+                          <Text size="sm">@{member.username}</Text>
+                        </Stack>
+                      </Inline>
+                      {renderMemberActions(member)}
+                    </Inline>
+                    <Badge variant={role === 'owner' ? 'solid' : 'outline'} size="sm">
+                      {ROLE_LABELS[role]}
+                    </Badge>
+                  </Stack>
+                </div>
+              );
+            })}
+          </Stack>
+        )
+      ) : (
+        <DataTable
+          aria-label={`Members of ${project.name}`}
+          className={canManage ? 'atlas-actions-table' : undefined}
+          columns={columns}
+          data={members}
+          getRowId={(member) => member.id}
+          filterable={true}
+          filterPlaceholder="Search members"
+          emptyMessage="No members yet."
+          selectable={canManage}
+          selectedIds={canManage ? selectedIds : undefined}
+          onSelectionChange={canManage ? (ids) => setSelectedIds(ids.map(String)) : undefined}
+          pageSize={10}
+        />
+      )}
 
       <ConfirmDialog
         isOpen={removing != null}

@@ -81,7 +81,7 @@ describe('POST /api/tasks', () => {
       title: 'Ship the fix',
       impact: 5,
       effort: 1,
-      dueDate: new Date().toISOString().slice(0, 10),
+      dueStartDate: new Date().toISOString().slice(0, 10),
     });
 
     expect(task.score).toBe(10);
@@ -200,16 +200,16 @@ describe('PATCH /api/tasks/:id', () => {
   });
 
   it('clears a due date when set to null', async () => {
-    const task = await createTask({ title: 'Dated', dueDate: '2026-12-31' });
+    const task = await createTask({ title: 'Dated', dueEndDate: '2026-12-31' });
 
     const response = await ctx.app.inject({
       method: 'PATCH',
       url: `/api/tasks/${task.id}`,
       headers: { cookie },
-      payload: { dueDate: null },
+      payload: { dueEndDate: null },
     });
 
-    expect(response.json<{ task: TaskDto }>().task.dueDate).toBeNull();
+    expect(response.json<{ task: TaskDto }>().task.dueEndDate).toBeNull();
   });
 
   it('404s for an unknown id', async () => {

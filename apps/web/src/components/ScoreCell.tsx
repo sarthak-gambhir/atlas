@@ -1,5 +1,5 @@
 import { Badge, Table, TBody, Td, Th, Tooltip, Tr } from '@astrabound/duality';
-import { urgencyFor, type TaskDto } from '@atlas/shared';
+import { CLOSED_STATUSES, relevantDue, urgencyFor, type TaskDto } from '@atlas/shared';
 
 import { todayIso } from '../lib/dates.ts';
 
@@ -12,7 +12,16 @@ interface ScoreCellProps {
  * the score down into the factors that produced it.
  */
 export function ScoreCell({ task }: ScoreCellProps) {
-  const urgency = urgencyFor(task.dueDate, task.urgencyOverride, todayIso());
+  // Mirror computeScore: closed tasks freeze urgency at their completion date, so
+  // the popover shows the same urgency that produced the (frozen) score.
+  const closed = (CLOSED_STATUSES as readonly string[]).includes(task.status);
+  const completedDay = task.completedAt ? task.completedAt.slice(0, 10) : null;
+  const reference = closed ? completedDay : todayIso();
+  const relevantDate =
+    closed && completedDay == null
+      ? null
+      : relevantDue(task.status, task.dueStartDate, task.dueEndDate).date;
+  const urgency = urgencyFor(relevantDate, task.urgencyOverride, reference ?? todayIso());
   const factors: Array<[label: string, value: string | number]> = [
     ['Impact', task.impact],
     ['Effort', task.effort],

@@ -115,13 +115,13 @@ export async function seedE2eDatabase(url: string): Promise<void> {
     const ctx = scoringContext(DEFAULT_SCORING);
 
     const seedTasks = [
-      { title: 'Fix checkout crash on Safari', status: 'in_progress', impact: 5, effort: 2, projectId: platform.id, assigneeId: admin.id, dueDate: dueInDays(1), tags: ['bug', 'urgent'] },
-      { title: 'Ship new pricing page', status: 'backlog', impact: 5, effort: 3, projectId: website.id, assigneeId: member.id, dueDate: dueInDays(5), tags: ['growth'] },
+      { title: 'Fix checkout crash on Safari', status: 'in_progress', impact: 5, effort: 2, projectId: platform.id, assigneeId: admin.id, dueEndDate: dueInDays(1), tags: ['bug', 'urgent'] },
+      { title: 'Ship new pricing page', status: 'backlog', impact: 5, effort: 3, projectId: website.id, assigneeId: member.id, dueStartDate: dueInDays(5), tags: ['growth'] },
       { title: 'Add SSO for enterprise accounts', status: 'backlog', impact: 4, effort: 5, projectId: platform.id, assigneeId: admin.id, tags: ['enterprise'] },
       { title: 'Migrate blog off the old CMS', status: 'backlog', impact: 2, effort: 4, projectId: website.id, tags: ['content'] },
-      { title: 'Reduce API p95 latency', status: 'in_progress', impact: 4, effort: 3, projectId: platform.id, assigneeId: member.id, dueDate: dueInDays(9), tags: ['performance'] },
+      { title: 'Reduce API p95 latency', status: 'in_progress', impact: 4, effort: 3, projectId: platform.id, assigneeId: member.id, dueEndDate: dueInDays(9), tags: ['performance'] },
       { title: 'Refresh onboarding emails', status: 'backlog', impact: 3, effort: 1, projectId: website.id, assigneeId: member.id, tags: ['growth', 'content'] },
-      { title: 'Audit third-party scripts', status: 'backlog', impact: 3, effort: 2, projectId: website.id, dueDate: dueInDays(14) },
+      { title: 'Audit third-party scripts', status: 'backlog', impact: 3, effort: 2, projectId: website.id, dueStartDate: dueInDays(14) },
       { title: 'Roll out feature flags service', status: 'backlog', impact: 4, effort: 4, projectId: platform.id, assigneeId: admin.id, tags: ['infra'] },
       { title: 'Write incident runbook', status: 'done', impact: 2, effort: 1, projectId: platform.id, assigneeId: admin.id, tags: ['infra'] },
       { title: 'Design dark mode palette', status: 'done', impact: 3, effort: 2, projectId: website.id, assigneeId: member.id },
@@ -139,7 +139,8 @@ export async function seedE2eDatabase(url: string): Promise<void> {
           effort: task.effort,
           projectId: 'projectId' in task ? task.projectId : null,
           assigneeId: 'assigneeId' in task ? task.assigneeId : null,
-          dueDate: 'dueDate' in task ? task.dueDate : null,
+          dueStartDate: 'dueStartDate' in task ? task.dueStartDate : null,
+          dueEndDate: 'dueEndDate' in task ? task.dueEndDate : null,
           tags: 'tags' in task ? [...task.tags] : [],
         },
         admin.id,

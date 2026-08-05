@@ -100,8 +100,10 @@ export const tasks = pgTable(
     effort: smallint('effort').notNull().default(3),
     confidence: real('confidence').notNull().default(1),
     urgencyOverride: smallint('urgency_override'),
-    dueDate: date('due_date'),
-    estimateHours: real('estimate_hours'),
+    /** When work should begin; drives urgency for not-yet-started tasks. */
+    dueStartDate: date('due_start_date'),
+    /** When work must finish; drives urgency once started. */
+    dueEndDate: date('due_end_date'),
     /** Sparse float so a reorder is a single UPDATE. Null means unpinned. */
     manualRank: doublePrecision('manual_rank'),
     createdBy: uuid('created_by')
@@ -115,7 +117,8 @@ export const tasks = pgTable(
     index('tasks_status_idx').on(t.status),
     index('tasks_project_idx').on(t.projectId),
     index('tasks_assignee_idx').on(t.assigneeId),
-    index('tasks_due_idx').on(t.dueDate),
+    index('tasks_due_start_idx').on(t.dueStartDate),
+    index('tasks_due_end_idx').on(t.dueEndDate),
     check('tasks_impact_range', sql`${t.impact} between 1 and 5`),
     check('tasks_effort_range', sql`${t.effort} between 1 and 5`),
     check('tasks_confidence_values', sql`${t.confidence} in (0, 0.5, 0.8, 1.0)`),

@@ -14,8 +14,10 @@ import {
 import { useMemo } from 'react';
 import type { TaskDto } from '@atlas/shared';
 
-import { describeDueDate } from '../../lib/dates.ts';
+import { dueLabel } from '../../lib/dates.ts';
+import { useIsMobile } from '../../lib/useIsMobile.ts';
 import { ScoreCell } from '../ScoreCell.tsx';
+import { TaskMiniList } from '../TaskMiniList.tsx';
 
 interface MatrixCellModalProps {
   impact: number;
@@ -34,6 +36,7 @@ export function MatrixCellModal({
   onClose,
   onOpenTask,
 }: MatrixCellModalProps) {
+  const isMobile = useIsMobile();
   const columns = useMemo<DataTableColumn<TaskDto>[]>(
     () => [
       {
@@ -54,11 +57,24 @@ export function MatrixCellModal({
       {
         id: 'due',
         header: 'Due',
-        value: (task) => task.dueDate ?? '',
+        value: (task) => dueLabel(task).date ?? '',
         sortable: true,
-        cell: (task) => (
-          <Text size="sm">{task.dueDate ? describeDueDate(task.dueDate, task.status) : '—'}</Text>
-        ),
+        cell: (task) => {
+          const label = dueLabel(task);
+          if (!label.date) return <Text size="sm">—</Text>;
+          return (
+            <Inline gap={1} align="center" wrap>
+              <Text size="sm">
+                {label.prefix} {label.phrase}
+              </Text>
+              {label.lateStart ? (
+                <Badge size="sm" variant="outline">
+                  Late start
+                </Badge>
+              ) : null}
+            </Inline>
+          );
+        },
       },
     ],
     [],
@@ -68,7 +84,7 @@ export function MatrixCellModal({
     <Modal
       isOpen
       onClose={onClose}
-      size="xl"
+      size={isMobile ? 'full' : 'xl'}
       showCloseButton
       aria-label={`Impact ${impact}, effort ${effort} tasks`}
     >
@@ -82,17 +98,21 @@ export function MatrixCellModal({
       </ModalHeader>
 
       <ModalBody>
-        <DataTable
-          aria-label={`Impact ${impact}, effort ${effort} tasks`}
-          className="atlas-fit-table"
-          columns={columns}
-          data={tasks}
-          getRowId={(task) => task.id}
-          filterable={false}
-          emptyMessage="Nothing here."
-          onRowClick={(task) => onOpenTask(task.id)}
-          pageSize={10}
-        />
+        {isMobile ? (
+          <TaskMiniList tasks={tasks} onOpen={onOpenTask} />
+        ) : (
+          <DataTable
+            aria-label={`Impact ${impact}, effort ${effort} tasks`}
+            className="atlas-fit-table"
+            columns={columns}
+            data={tasks}
+            getRowId={(task) => task.id}
+            filterable={false}
+            emptyMessage="Nothing here."
+            onRowClick={(task) => onOpenTask(task.id)}
+            pageSize={10}
+          />
+        )}
       </ModalBody>
 
       <ModalFooter>

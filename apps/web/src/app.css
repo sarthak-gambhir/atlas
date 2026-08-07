@@ -50,6 +50,15 @@ body {
 .atlas-header {
   display: flex;
   align-items: center;
+
+  .atlas-quick-actions-button {
+    padding: var(--space-1);
+    .du_kbd {
+      padding: 2px var(--space-2);
+      line-height: 1;
+      border-width: 1px;
+    }
+  }
 }
 
 .atlas-header-row {
@@ -171,7 +180,6 @@ button.atlas-matrix-tile:hover {
 /* Unified search/filter panel in Popover or Modal. */
 .atlas-filter-panel {
   min-inline-size: 18rem;
-  max-inline-size: 22rem;
   margin: 1rem auto;
 }
 
@@ -302,6 +310,12 @@ button.atlas-matrix-tile:hover {
   z-index: 10;
   background: var(--bg);
   border-block-end: var(--border-width) solid var(--fg);
+}
+
+.atlas-command-palette {
+  .du_command_footer {
+    font-size: var(--font-size-sm);
+  }
 }
 
 /* Off-screen until focused by the keyboard, then parked over the header. */

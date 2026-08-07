@@ -2,8 +2,7 @@ import { z } from 'zod';
 
 import { PROJECT_ICON_KEYS, PROJECT_MEMBER_ROLES, TASK_STATUSES, USER_ROLES } from './domain.ts';
 import type { ProjectMemberRole } from './domain.ts';
-import type { PRIORITY_BUCKETS } from './score.ts';
-import { CONFIDENCE_VALUES } from './score.ts';
+import { CONFIDENCE_VALUES, PRIORITY_BUCKETS } from './score.ts';
 
 export const loginInputSchema = z.object({
   username: z.string().trim().min(1).max(100),
@@ -118,8 +117,11 @@ const booleanParam = z
   .transform((value) => value === true || value === 'true')
   .optional();
 
+const bucketSchema = z.enum(PRIORITY_BUCKETS);
+
 export const taskFilterSchema = z.object({
   statuses: arrayParam(taskStatusSchema),
+  buckets: arrayParam(bucketSchema),
   projectId: z.uuid().optional(),
   assigneeId: z.uuid().optional(),
   tags: arrayParam(tagNameSchema),

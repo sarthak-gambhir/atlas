@@ -1,9 +1,8 @@
-import { Button, Icon, Inline, Text } from '@astrabound/duality';
+import { Button, Icon, Inline, Stack, Text } from '@astrabound/duality';
 import type { IconType } from 'react-icons';
 import type { ReactNode } from 'react';
 
 import { ACTION_ICONS } from '../lib/icons.ts';
-import { useIsMobile } from '../lib/useIsMobile.ts';
 
 interface QuickFilterChipProps {
   /** The chip's subject glyph, e.g. a star for favorites. */
@@ -45,20 +44,21 @@ export function QuickFilterChip({
 }
 
 /**
- * Labels a row of QuickFilterChips as a group so the chips read as filters
- * rather than loose buttons (and screen readers announce them together).
+ * Groups a set of QuickFilterChips under a section label so they read as filters
+ * rather than loose buttons. The label sits above the chip row (screen readers
+ * announce them together via the group), which keeps the chips from wrapping
+ * around the label in a narrow popover.
  */
 export function QuickFilterBar({ children }: { children: ReactNode }) {
-  const isMobile = useIsMobile();
   return (
-    <div role="group" aria-label="Quick filters">
+    <Stack gap={2} role="group" aria-label="Quick filters">
+      <Inline gap={1} align="center" wrap={false}>
+        <Icon icon={ACTION_ICONS.filter} />
+        <Text size="sm">Quick filters</Text>
+      </Inline>
       <Inline gap={2} align="center" wrap>
-        <Inline gap={1} align="center" wrap={false}>
-          <Icon icon={ACTION_ICONS.filter} />
-          {!isMobile && <Text size="sm">Quick filters</Text>}
-        </Inline>
         {children}
       </Inline>
-    </div>
+    </Stack>
   );
 }

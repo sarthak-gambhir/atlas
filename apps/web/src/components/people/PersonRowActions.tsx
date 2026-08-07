@@ -156,6 +156,7 @@ export function PersonRowActions({ person, isSelf, isLastAdmin, onEdit }: Person
 
       <ConfirmDialog
         isOpen={confirm === 'disable'}
+        closeOnBackdrop={false}
         tone="danger"
         title={`Disable ${person.displayName}?`}
         description="They will be signed out of every device and cannot sign in until re-enabled."
@@ -167,6 +168,7 @@ export function PersonRowActions({ person, isSelf, isLastAdmin, onEdit }: Person
 
       <ConfirmDialog
         isOpen={confirm === 'demote'}
+        closeOnBackdrop={false}
         tone="danger"
         title={`Make ${person.displayName} a member?`}
         description="They will lose admin access, including managing people and scoring."
@@ -178,6 +180,7 @@ export function PersonRowActions({ person, isSelf, isLastAdmin, onEdit }: Person
 
       <ConfirmDialog
         isOpen={confirm === 'delete'}
+        closeOnBackdrop={false}
         tone="danger"
         title={`Delete ${person.displayName}?`}
         description="This permanently removes the account. Any tasks assigned to them become unassigned. This cannot be undone."
@@ -192,6 +195,7 @@ export function PersonRowActions({ person, isSelf, isLastAdmin, onEdit }: Person
         onClose={() => setTempPassword(null)}
         size="sm"
         showCloseButton
+        closeOnBackdrop={false}
         aria-label="Temporary password"
       >
         <ModalHeader>

@@ -125,6 +125,7 @@ export function BoardBucketModal({
       onClose={onClose}
       size={isMobile ? 'full' : 'lg'}
       showCloseButton
+      closeOnBackdrop={false}
       aria-label={`${STATUS_LABELS[status]} tasks`}
     >
       <ModalHeader>

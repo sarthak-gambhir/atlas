@@ -1,13 +1,15 @@
-import { Button, Input, Stack } from '@astrabound/duality';
+import { Button, Divider, Input, Stack } from '@astrabound/duality';
 
 import { ACTION_ICONS } from '../lib/icons.ts';
-import { IconLabel } from './IconLabel.tsx';
+import { QuickFilterBar, QuickFilterChip } from './QuickFilterChip.tsx';
 
 export interface ProjectFilterFieldsProps {
   search: string;
   onSearchChange: (value: string) => void;
   includeArchived: boolean;
   onIncludeArchivedChange: (value: boolean) => void;
+  favoritesOnly: boolean;
+  onFavoritesOnlyChange: (value: boolean) => void;
   isFiltered: boolean;
   onClear: () => void;
 }
@@ -18,11 +20,32 @@ export function ProjectFilterFields({
   onSearchChange,
   includeArchived,
   onIncludeArchivedChange,
+  favoritesOnly,
+  onFavoritesOnlyChange,
   isFiltered,
   onClear,
 }: ProjectFilterFieldsProps) {
   return (
     <Stack gap={3}>
+      <QuickFilterBar>
+        <QuickFilterChip
+          icon={ACTION_ICONS.favorite}
+          active={favoritesOnly}
+          onToggle={() => onFavoritesOnlyChange(!favoritesOnly)}
+        >
+          Favorites
+        </QuickFilterChip>
+        <QuickFilterChip
+          icon={ACTION_ICONS.archive}
+          active={includeArchived}
+          onToggle={() => onIncludeArchivedChange(!includeArchived)}
+        >
+          Show archived
+        </QuickFilterChip>
+      </QuickFilterBar>
+
+      <Divider />
+
       <Input
         value={search}
         placeholder="Search projects"
@@ -31,17 +54,6 @@ export function ProjectFilterFields({
         onClear={() => onSearchChange('')}
         onChange={(event) => onSearchChange(event.target.value)}
       />
-
-      <Button
-        className="atlas-button"
-        variant="inverse"
-        size="md"
-        onClick={() => onIncludeArchivedChange(!includeArchived)}
-      >
-        <IconLabel icon={includeArchived ? ACTION_ICONS.hide : ACTION_ICONS.reveal}>
-          {includeArchived ? 'Hide archived' : 'Show archived'}
-        </IconLabel>
-      </Button>
 
       {isFiltered ? (
         <Button className="atlas-button" variant="ghost" size="md" onClick={onClear}>

@@ -160,11 +160,22 @@ export function AppShell() {
   );
 
   const searchButton = isMobile ? (
-    <Button variant="ghost" size="sm" aria-label="Search" onClick={() => setPaletteOpen(true)}>
+    <Button
+      className="atlas-quick-actions-button"
+      variant="ghost"
+      size="sm"
+      aria-label="Search"
+      onClick={() => setPaletteOpen(true)}
+    >
       <Icon icon={ACTION_ICONS.search} />
     </Button>
   ) : (
-    <Button variant="solid" size="sm" onClick={() => setPaletteOpen(true)}>
+    <Button
+      className="atlas-quick-actions-button"
+      variant="ghost"
+      size="sm"
+      onClick={() => setPaletteOpen(true)}
+    >
       <Inline gap={2} align="center">
         <span>Search</span>
         <Kbd>Ctrl</Kbd>

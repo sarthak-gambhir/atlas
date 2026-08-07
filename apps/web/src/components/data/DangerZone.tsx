@@ -70,7 +70,14 @@ export function DangerZone() {
         </Button>
       </Inline>
 
-      <Modal isOpen={isOpen} onClose={close} size="sm" showCloseButton aria-label="Reset all data">
+      <Modal
+        isOpen={isOpen}
+        onClose={close}
+        size="sm"
+        showCloseButton
+        closeOnBackdrop={false}
+        aria-label="Reset all data"
+      >
         <ModalHeader>
           <Heading level={2} visualLevel={4}>
             Reset all data?

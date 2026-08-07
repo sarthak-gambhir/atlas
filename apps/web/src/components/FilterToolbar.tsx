@@ -108,6 +108,9 @@ interface TaskFilterToolbarProps {
   showStatus?: boolean;
   showClosedToggle?: boolean;
   excludeArchived?: boolean;
+  /** Tasks page only: the client-side "in favorite projects" quick filter. */
+  inFavorites?: boolean;
+  onInFavoritesChange?: (value: boolean) => void;
 }
 
 export function TaskFilterToolbar({
@@ -115,14 +118,23 @@ export function TaskFilterToolbar({
   showStatus = true,
   showClosedToggle = true,
   excludeArchived = false,
+  inFavorites,
+  onInFavoritesChange,
 }: TaskFilterToolbarProps) {
+  // inFavorites lives outside useFilters, so fold it into the panel's badge.
+  const favoriteActive = inFavorites ?? false;
   return (
-    <FilterToolbar isFiltered={filters.isFiltered} activeCount={filters.activeCount}>
+    <FilterToolbar
+      isFiltered={filters.isFiltered || favoriteActive}
+      activeCount={filters.activeCount + (favoriteActive ? 1 : 0)}
+    >
       <TaskFilterFields
         filters={filters}
         showStatus={showStatus}
         showClosedToggle={showClosedToggle}
         excludeArchived={excludeArchived}
+        inFavorites={inFavorites}
+        onInFavoritesChange={onInFavoritesChange}
       />
     </FilterToolbar>
   );
@@ -133,6 +145,8 @@ interface ProjectFilterToolbarProps {
   onSearchChange: (value: string) => void;
   includeArchived: boolean;
   onIncludeArchivedChange: (value: boolean) => void;
+  favoritesOnly: boolean;
+  onFavoritesOnlyChange: (value: boolean) => void;
   isFiltered: boolean;
   activeCount: number;
   onClear: () => void;
@@ -143,6 +157,8 @@ export function ProjectFilterToolbar({
   onSearchChange,
   includeArchived,
   onIncludeArchivedChange,
+  favoritesOnly,
+  onFavoritesOnlyChange,
   isFiltered,
   activeCount,
   onClear,
@@ -154,6 +170,8 @@ export function ProjectFilterToolbar({
         onSearchChange={onSearchChange}
         includeArchived={includeArchived}
         onIncludeArchivedChange={onIncludeArchivedChange}
+        favoritesOnly={favoritesOnly}
+        onFavoritesOnlyChange={onFavoritesOnlyChange}
         isFiltered={isFiltered}
         onClear={onClear}
       />

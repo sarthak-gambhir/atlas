@@ -13,7 +13,7 @@ import {
   useToast,
   type DataTableColumn,
 } from '@astrabound/duality';
-import { type TaskDto, type TaskFilter } from '@atlas/shared';
+import { PRIORITY_BUCKETS, type TaskDto, type TaskFilter } from '@atlas/shared';
 import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 
@@ -199,7 +199,8 @@ export function TaskTable({
       {
         id: 'bucket',
         header: 'Priority',
-        value: (task) => task.bucket,
+        // Sort by bucket rank (now < next < later < someday), not the label text.
+        value: (task) => PRIORITY_BUCKETS.indexOf(task.bucket),
         sortable: true,
         cell: (task) => <BucketBadge bucket={task.bucket} />,
       },

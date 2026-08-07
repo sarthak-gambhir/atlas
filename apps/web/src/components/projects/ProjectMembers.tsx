@@ -309,6 +309,7 @@ export function ProjectMembers({ project, canManage }: ProjectMembersProps) {
 
       <ConfirmDialog
         isOpen={removing != null}
+        closeOnBackdrop={false}
         tone="danger"
         title={removing ? `Remove ${removing.displayName}?` : 'Remove member?'}
         description="They lose access to this project, and any tasks assigned to them here become unassigned."
@@ -320,6 +321,7 @@ export function ProjectMembers({ project, canManage }: ProjectMembersProps) {
 
       <ConfirmDialog
         isOpen={transferring != null}
+        closeOnBackdrop={false}
         title={transferring ? `Make ${transferring.displayName} the owner?` : 'Transfer ownership?'}
         description="They will be able to edit, archive and manage members. You stay a member."
         confirmLabel="Transfer"

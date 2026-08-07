@@ -133,6 +133,7 @@ export function ProjectRowActions({
 
       <ConfirmDialog
         isOpen={confirmingDelete}
+        closeOnBackdrop={false}
         tone="danger"
         title={`Delete ${project.name}?`}
         description={deleteDescription}

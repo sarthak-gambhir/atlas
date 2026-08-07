@@ -5,7 +5,6 @@ import { useMemo, useState } from 'react';
 import { ProjectFilterToolbar } from '../components/FilterToolbar.tsx';
 import { IconLabel } from '../components/IconLabel.tsx';
 import { PageHeader } from '../components/PageHeader.tsx';
-import { QuickFilterBar, QuickFilterChip } from '../components/QuickFilterChip.tsx';
 import { ProjectCard } from '../components/projects/ProjectCard.tsx';
 import { ProjectFormModal } from '../components/projects/ProjectFormModal.tsx';
 import { ACTION_ICONS } from '../lib/icons.ts';
@@ -67,6 +66,8 @@ export function ProjectsPage() {
               onSearchChange={setSearch}
               includeArchived={includeArchived}
               onIncludeArchivedChange={setIncludeArchived}
+              favoritesOnly={favoritesOnly}
+              onFavoritesOnlyChange={setFavoritesOnly}
               isFiltered={isFiltered}
               activeCount={activeCount}
               onClear={clearFilters}
@@ -77,23 +78,6 @@ export function ProjectsPage() {
           </Inline>
         }
       />
-
-      <QuickFilterBar>
-        <QuickFilterChip
-          icon={ACTION_ICONS.favorite}
-          active={favoritesOnly}
-          onToggle={() => setFavoritesOnly((prev) => !prev)}
-        >
-          Favorites
-        </QuickFilterChip>
-        <QuickFilterChip
-          icon={ACTION_ICONS.archive}
-          active={includeArchived}
-          onToggle={() => setIncludeArchived((prev) => !prev)}
-        >
-          Show archived
-        </QuickFilterChip>
-      </QuickFilterBar>
 
       {error ? <Alert tone="error">{error.message}</Alert> : null}
 

@@ -177,9 +177,16 @@ export async function listTasks(
     rows.map((row) => row.id),
   );
 
-  return rows
-    .map((row) => toDto(row, tagsByTask.get(row.id) ?? [], ctx))
-    .sort((a, b) => compareTasksByRank(a, b, ctx.settings, ctx.today));
+  let dtos = rows.map((row) => toDto(row, tagsByTask.get(row.id) ?? [], ctx));
+
+  // Buckets are derived from the (unstored) score, so this narrows in memory
+  // after scoring rather than in SQL.
+  if (filter.buckets?.length) {
+    const wanted = new Set(filter.buckets);
+    dtos = dtos.filter((dto) => wanted.has(dto.bucket));
+  }
+
+  return dtos.sort((a, b) => compareTasksByRank(a, b, ctx.settings, ctx.today));
 }
 
 export async function getTask(

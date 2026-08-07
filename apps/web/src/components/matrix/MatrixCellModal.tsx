@@ -86,6 +86,7 @@ export function MatrixCellModal({
       onClose={onClose}
       size={isMobile ? 'full' : 'xl'}
       showCloseButton
+      closeOnBackdrop={false}
       aria-label={`Impact ${impact}, effort ${effort} tasks`}
     >
       <ModalHeader>

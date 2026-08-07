@@ -164,6 +164,24 @@ describe('GET /api/tasks', () => {
     expect((await listTasks('?q=docs')).map((t) => t.title)).toEqual(['write docs']);
   });
 
+  it('filters by priority bucket', async () => {
+    const urgent = await createTask({
+      title: 'urgent',
+      impact: 5,
+      effort: 1,
+      dueStartDate: new Date().toISOString().slice(0, 10),
+    });
+    const someday = await createTask({ title: 'someday', impact: 1, effort: 5 });
+
+    // Guard: buckets are score-derived, so this only tests filtering if they differ.
+    expect(urgent.bucket).not.toBe(someday.bucket);
+
+    expect((await listTasks(`?buckets=${urgent.bucket}`)).map((t) => t.title)).toEqual(['urgent']);
+    expect((await listTasks(`?buckets=${someday.bucket}`)).map((t) => t.title)).toEqual([
+      'someday',
+    ]);
+  });
+
   it('searches notes as well as titles', async () => {
     await createTask({ title: 'Opaque title', notes: 'mentions kubernetes' });
     expect((await listTasks('?q=kubernetes')).map((t) => t.title)).toEqual(['Opaque title']);

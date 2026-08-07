@@ -95,7 +95,14 @@ export function EditIdentityModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="md" showCloseButton aria-label={title}>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="md"
+      showCloseButton
+      closeOnBackdrop={false}
+      aria-label={title}
+    >
       <form onSubmit={submit}>
         <ModalHeader>
           <Heading level={2} visualLevel={4}>

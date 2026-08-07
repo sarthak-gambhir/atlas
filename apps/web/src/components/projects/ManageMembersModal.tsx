@@ -118,6 +118,7 @@ export function ManageMembersModal({ project, canManage, isOpen, onClose }: Mana
       onClose={onClose}
       size="md"
       showCloseButton
+      closeOnBackdrop={false}
       aria-label={`Members of ${project.name}`}
     >
       <ModalHeader>
@@ -201,6 +202,7 @@ export function ManageMembersModal({ project, canManage, isOpen, onClose }: Mana
 
       <ConfirmDialog
         isOpen={confirming}
+        closeOnBackdrop={false}
         title="Save member changes?"
         description={`This will ${changeSummary} ${
           toAdd.length + toRemove.length === 1 ? 'member' : 'members'

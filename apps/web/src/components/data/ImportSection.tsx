@@ -380,6 +380,7 @@ export function ImportSection() {
 
       <ConfirmDialog
         isOpen={confirmOpen}
+        closeOnBackdrop={false}
         tone="danger"
         title="Replace all data?"
         description="Replace deletes every existing task and project before importing. People and their passwords are left alone."

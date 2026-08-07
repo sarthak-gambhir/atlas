@@ -74,7 +74,14 @@ export function MatrixQuadrantModal({ label, tasks, onClose, onOpenTask }: Matri
   );
 
   return (
-    <Modal isOpen onClose={onClose} size={isMobile ? 'full' : 'xl'} showCloseButton aria-label={label}>
+    <Modal
+      isOpen
+      onClose={onClose}
+      size={isMobile ? 'full' : 'xl'}
+      showCloseButton
+      closeOnBackdrop={false}
+      aria-label={label}
+    >
       <ModalHeader>
         <Inline gap={2} align="center" justify="start">
           <Heading level={2} visualLevel={4}>

@@ -1,9 +1,10 @@
-import type { TaskFilter, TaskStatus } from '@atlas/shared';
+import type { PriorityBucket, TaskFilter, TaskStatus } from '@atlas/shared';
 import { useMemo, useState } from 'react';
 
 export interface FilterState {
   q: string;
   statuses: TaskStatus[];
+  buckets: PriorityBucket[];
   projectId: string;
   assigneeId: string;
   tags: string[];
@@ -16,6 +17,7 @@ export interface FilterState {
 const EMPTY: FilterState = {
   q: '',
   statuses: [],
+  buckets: [],
   projectId: '',
   assigneeId: '',
   tags: [],
@@ -43,6 +45,7 @@ function countActive(state: FilterState, baseline: FilterState): number {
   let count = 0;
   if (state.q.trim() !== baseline.q) count++;
   if (!sameSet(state.statuses, baseline.statuses)) count++;
+  if (!sameSet(state.buckets, baseline.buckets)) count++;
   if (state.projectId !== baseline.projectId) count++;
   if (state.assigneeId !== baseline.assigneeId) count++;
   if (!sameSet(state.tags, baseline.tags)) count++;
@@ -60,6 +63,7 @@ export function useFilters(initial: Partial<FilterState> = {}): UseFilters {
     return {
       ...(trimmed ? { q: trimmed } : {}),
       ...(state.statuses.length ? { statuses: state.statuses } : {}),
+      ...(state.buckets.length ? { buckets: state.buckets } : {}),
       ...(state.projectId ? { projectId: state.projectId } : {}),
       ...(state.assigneeId ? { assigneeId: state.assigneeId } : {}),
       ...(state.tags.length ? { tags: state.tags } : {}),
@@ -73,6 +77,7 @@ export function useFilters(initial: Partial<FilterState> = {}): UseFilters {
   const isFiltered =
     state.q.trim() !== baseline.q ||
     !sameSet(state.statuses, baseline.statuses) ||
+    !sameSet(state.buckets, baseline.buckets) ||
     state.projectId !== baseline.projectId ||
     state.assigneeId !== baseline.assigneeId ||
     !sameSet(state.tags, baseline.tags) ||

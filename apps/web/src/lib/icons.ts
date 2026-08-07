@@ -9,7 +9,7 @@ import {
   RiArrowUpDoubleLine,
   RiArrowUpSLine,
   RiCheckLine,
-  RiCheckboxCircleLine,
+  RiCheckDoubleLine,
   RiArrowDownDoubleLine,
   RiDeleteBinLine,
   RiDownloadLine,
@@ -58,7 +58,7 @@ export const ACTION_ICONS = {
   delete: RiDeleteBinLine,
   archive: RiArchiveLine,
   restore: RiInboxUnarchiveLine,
-  complete: RiCheckboxCircleLine,
+  complete: RiCheckDoubleLine,
   confirm: RiCheckLine,
 
   export: RiDownloadLine,
@@ -105,7 +105,7 @@ export const STATUS_ICONS: Record<TaskStatus, IconType> = {
   next: RiArrowRightDoubleLine,
   in_progress: RiRefreshLine,
   blocked: RiForbid2Line,
-  done: RiCheckboxCircleLine,
+  done: RiCheckDoubleLine,
   archived: RiArchiveLine,
 };
 

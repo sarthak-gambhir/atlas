@@ -63,7 +63,14 @@ export function AddPersonModal({ isOpen, onClose }: AddPersonModalProps) {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={close} size="md" showCloseButton aria-label="Add person">
+    <Modal
+      isOpen={isOpen}
+      onClose={close}
+      size="md"
+      showCloseButton
+      closeOnBackdrop={false}
+      aria-label="Add person"
+    >
       <form onSubmit={submit}>
         <ModalHeader>
           <Heading level={2} visualLevel={4}>

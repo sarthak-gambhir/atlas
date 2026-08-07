@@ -98,6 +98,7 @@ export function ProjectFormModal({ project, isOpen, onClose }: ProjectFormModalP
       onClose={onClose}
       size="lg"
       showCloseButton
+      closeOnBackdrop={false}
       aria-label={editing ? 'Edit project' : 'New project'}
     >
       <form onSubmit={submit} className="atlas-modal-form">

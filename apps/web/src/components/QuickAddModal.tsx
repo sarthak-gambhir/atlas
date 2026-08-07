@@ -157,7 +157,14 @@ export function QuickAddModal({ onClose, initialProjectId = '' }: QuickAddModalP
   };
 
   return (
-    <Modal isOpen onClose={onClose} size="lg" showCloseButton aria-label="New task">
+    <Modal
+      isOpen
+      onClose={onClose}
+      size="lg"
+      showCloseButton
+      closeOnBackdrop={false}
+      aria-label="New task"
+    >
       <form onSubmit={submit}>
         <ModalHeader>
           <Inline gap={3} align="center">

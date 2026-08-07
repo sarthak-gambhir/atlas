@@ -1,3 +1,4 @@
+import type { PriorityBucket } from '@atlas/shared';
 import { useMemo } from 'react';
 
 import type { FilterState } from './filters.ts';
@@ -16,6 +17,12 @@ export interface FilterFacets {
    * Empty until the task list loads; callers fall back to the global count then.
    */
   tagCounts: Map<string, number>;
+  /**
+   * Live task count per priority bucket within the current project/assignee/tag
+   * selection. The bucket options themselves are a fixed set, so callers show
+   * every bucket and read its count (defaulting to 0) from here.
+   */
+  bucketCounts: Map<PriorityBucket, number>;
 }
 
 /**
@@ -145,7 +152,19 @@ export function useFilterFacets(state: FilterState, excludeArchived = false): Fi
       tagNames = new Set((tags ?? []).map((t) => t.name));
     }
 
-    return { projectIds, assigneeIds, tagNames, tagCounts };
+    // ---- Priority (bucket) counts: cross-filter by project + assignee + tag ----
+    // The option set is fixed (PRIORITY_BUCKETS), so this only supplies counts.
+    const bucketCounts = new Map<PriorityBucket, number>();
+    if (tasksLoaded) {
+      for (const t of scoped) {
+        if (projectId && t.projectId !== projectId) continue;
+        if (assigneeId && t.assigneeId !== assigneeId) continue;
+        if (!matchesTags(t)) continue;
+        bucketCounts.set(t.bucket, (bucketCounts.get(t.bucket) ?? 0) + 1);
+      }
+    }
+
+    return { projectIds, assigneeIds, tagNames, tagCounts, bucketCounts };
   }, [
     tasks,
     projects,

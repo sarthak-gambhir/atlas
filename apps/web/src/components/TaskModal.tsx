@@ -178,7 +178,14 @@ export function TaskModal({ task, onClose, onDeleted }: TaskModalProps) {
   };
 
   return (
-    <Modal isOpen onClose={onClose} size="lg" showCloseButton aria-label="Task details">
+    <Modal
+      isOpen
+      onClose={onClose}
+      size="lg"
+      showCloseButton
+      closeOnBackdrop={false}
+      aria-label="Task details"
+    >
       <ModalHeader>
         <Inline gap={3} align="center">
           <Heading level={2} visualLevel={4}>

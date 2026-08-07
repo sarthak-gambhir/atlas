@@ -69,6 +69,7 @@ export function CommandBar({ isOpen, onClose, onQuickAdd }: CommandBarProps) {
 
   return (
     <CommandPalette
+      className="atlas-command-palette"
       isOpen={isOpen}
       onClose={onClose}
       commands={commands}

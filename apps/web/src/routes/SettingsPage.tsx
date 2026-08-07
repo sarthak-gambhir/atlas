@@ -9,6 +9,7 @@ import {
   FormField,
   Grid,
   Heading,
+  Icon,
   Inline,
   NumberInput,
   Select,
@@ -32,7 +33,6 @@ import {
   type ScoringSettings,
 } from '@atlas/shared';
 import { Fragment, useState, type FormEvent, type ReactNode } from 'react';
-import { RiArrowDownSFill } from 'react-icons/ri';
 
 import { useSaveScoring } from '../lib/admin.ts';
 import { AccountPanel } from '../components/account/AccountPanel.tsx';
@@ -41,6 +41,7 @@ import { BucketBadge } from '../components/BucketBadge.tsx';
 import { DataPanel } from '../components/data/DataPanel.tsx';
 import { PageHeader } from '../components/PageHeader.tsx';
 import { PeoplePanel } from '../components/people/PeoplePanel.tsx';
+import { ACTION_ICONS } from '../lib/icons.ts';
 import { BUCKET_LABELS, CONFIDENCE_LABELS } from '../lib/labels.ts';
 import { useSession } from '../lib/session.ts';
 import { useScoringSettings } from '../lib/tasks.ts';
@@ -397,7 +398,7 @@ function ScoreAxis({
           }}
         >
           <span style={{ fontSize: '1rem', fontWeight: 600 }}>{marker}</span>
-          <RiArrowDownSFill aria-hidden />
+          <Icon icon={ACTION_ICONS.expand} />
         </div>
       </div>
 
@@ -481,40 +482,51 @@ function ScoringPlayground({
       <ScoreAxis thresholds={thresholds} max={axisMax} marker={score} />
 
       <Grid minChildWidth={220} gap={4}>
+        {/* Slider does not read FormField's context, so it needs the render prop
+         * to receive the generated id that ties the label to the range input. */}
         <FormField label="Impact">
-          <Slider
-            value={sample.impact}
-            min={1}
-            max={5}
-            step={1}
-            marks={marks}
-            showValue
-            onValueChange={(value) => onChange('impact', value)}
-          />
-        </FormField>
-
-        <FormField label="Effort">
-          <Slider
-            value={sample.effort}
-            min={1}
-            max={5}
-            step={1}
-            marks={marks}
-            showValue
-            onValueChange={(value) => onChange('effort', value)}
-          />
+          {(field) => (
+            <Slider
+              {...field}
+              value={sample.impact}
+              min={1}
+              max={5}
+              step={1}
+              marks={marks}
+              showValue
+              onValueChange={(value) => onChange('impact', value)}
+            />
+          )}
         </FormField>
 
         <FormField label="Urgency">
-          <Slider
-            value={sample.urgency}
-            min={1}
-            max={5}
-            step={1}
-            marks={marks}
-            showValue
-            onValueChange={(value) => onChange('urgency', value)}
-          />
+          {(field) => (
+            <Slider
+              {...field}
+              value={sample.urgency}
+              min={1}
+              max={5}
+              step={1}
+              marks={marks}
+              showValue
+              onValueChange={(value) => onChange('urgency', value)}
+            />
+          )}
+        </FormField>
+
+        <FormField label="Effort">
+          {(field) => (
+            <Slider
+              {...field}
+              value={sample.effort}
+              min={1}
+              max={5}
+              step={1}
+              marks={marks}
+              showValue
+              onValueChange={(value) => onChange('effort', value)}
+            />
+          )}
         </FormField>
 
         <FormField label="Confidence">
@@ -531,4 +543,3 @@ function ScoringPlayground({
     </Stack>
   );
 }
-

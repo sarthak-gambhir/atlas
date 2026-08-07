@@ -14,9 +14,11 @@ import {
 import type { UserSummaryDto } from '@atlas/shared';
 import { useMemo, useState } from 'react';
 
+import { ACTION_ICONS } from '../../lib/icons.ts';
 import { useUsers } from '../../lib/organization.ts';
 import { useSession } from '../../lib/session.ts';
 import { useIsMobile } from '../../lib/useIsMobile.ts';
+import { IconLabel } from '../IconLabel.tsx';
 import { AddPersonModal } from './AddPersonModal.tsx';
 import { EditPersonModal } from './EditPersonModal.tsx';
 import { PersonRowActions } from './PersonRowActions.tsx';
@@ -140,8 +142,8 @@ export function PeoplePanel() {
           </FormField>
         </Inline>
 
-        <Button variant="solid" onClick={() => setAddOpen(true)}>
-          Add person
+        <Button className="atlas-button" variant="solid" size="md" onClick={() => setAddOpen(true)}>
+          <IconLabel icon={ACTION_ICONS.addPerson}>Add person</IconLabel>
         </Button>
       </Inline>
 
@@ -184,9 +186,7 @@ export function PeoplePanel() {
                     ) : (
                       <Badge variant="solid">Active</Badge>
                     )}
-                    <Text size="sm">
-                      Joined {new Date(person.createdAt).toLocaleDateString()}
-                    </Text>
+                    <Text size="sm">Joined {new Date(person.createdAt).toLocaleDateString()}</Text>
                   </Inline>
                 </Stack>
               </div>
@@ -203,6 +203,7 @@ export function PeoplePanel() {
           initialSort={{ columnId: 'person', direction: 'asc' }}
           emptyMessage="No people match these filters."
           aria-label="People"
+          stickyHeader
           pageSize={10}
         />
       )}

@@ -9,7 +9,9 @@ import { test, expect, type Page, type TestInfo } from '@playwright/test';
  */
 const routes = [
   { path: '/', name: 'backlog', heading: 'Backlog', ready: 'Fix checkout crash on Safari' },
-  { path: '/board', name: 'board', heading: 'Board', ready: 'Fix checkout crash on Safari' },
+  // The board groups tasks into summary columns instead of listing them, so a
+  // column heading is what proves its query settled.
+  { path: '/board', name: 'board', heading: 'Board', ready: 'In progress' },
   { path: '/matrix', name: 'matrix', heading: 'Matrix', ready: 'Impact / Effort' },
   { path: '/projects', name: 'projects', heading: 'Projects', ready: 'Website relaunch' },
   { path: '/settings', name: 'settings', heading: 'Settings', ready: 'Bucket thresholds' },
@@ -52,11 +54,6 @@ test.describe('signed out', () => {
 test('tour: overlays', async ({ page }, testInfo) => {
   await open(page, routes[0]);
 
-  await page.getByText('Fix checkout crash on Safari').first().click();
-  await expect(page.getByRole('heading', { name: 'Task', exact: true })).toBeVisible();
-  await shoot(page, testInfo, 'task-drawer');
-  await page.keyboard.press('Escape');
-
   await page.getByRole('button', { name: 'New task' }).first().click();
   await expect(page.getByRole('heading', { name: 'New task', exact: true })).toBeVisible();
   await shoot(page, testInfo, 'quick-add');
@@ -65,5 +62,13 @@ test('tour: overlays', async ({ page }, testInfo) => {
   await page.keyboard.press('Control+k');
   await expect(page.getByPlaceholder('Search commands...')).toBeVisible();
   await shoot(page, testInfo, 'command-palette');
+  await page.keyboard.press('Escape');
+
+  // Last, because a backlog row navigates away: it opens the task's own page,
+  // and editing happens in a modal from there.
+  await page.getByText('Fix checkout crash on Safari').first().click();
+  await page.getByRole('button', { name: 'Edit' }).click();
+  await expect(page.getByRole('heading', { name: 'Task', exact: true })).toBeVisible();
+  await shoot(page, testInfo, 'task-edit');
   await page.keyboard.press('Escape');
 });

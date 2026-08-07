@@ -17,6 +17,7 @@ import {
   TagInput,
   Text,
   Textarea,
+  Tooltip,
   useToast,
 } from '@astrabound/duality';
 import {
@@ -31,7 +32,9 @@ import {
 import { useState } from 'react';
 
 import { BucketBadge } from './BucketBadge.tsx';
+import { IconLabel } from './IconLabel.tsx';
 import { formatIsoDate, parseIsoDate, todayIso } from '../lib/dates.ts';
+import { ACTION_ICONS } from '../lib/icons.ts';
 import { CONFIDENCE_LABELS, STATUS_LABELS, URGENCY_OPTIONS } from '../lib/labels.ts';
 import { canEditProject, useProjects, useUsers } from '../lib/organization.ts';
 import { useSession } from '../lib/session.ts';
@@ -88,7 +91,9 @@ export function TaskModal({ task, onClose, onDeleted }: TaskModalProps) {
   const assigneeOptions = [
     { value: '', label: 'Unassigned' },
     ...(users ?? [])
-      .filter((user) => (memberIds ? memberIds.has(user.id) : !user.disabled) || user.id === assigneeId)
+      .filter(
+        (user) => (memberIds ? memberIds.has(user.id) : !user.disabled) || user.id === assigneeId,
+      )
       .map((user) => ({ value: user.id, label: user.displayName })),
   ];
 
@@ -130,6 +135,7 @@ export function TaskModal({ task, onClose, onDeleted }: TaskModalProps) {
     scoring,
     todayIso(),
   );
+  const bucket = bucketFor(preview, scoring.thresholds);
 
   const save = () => {
     update.mutate(
@@ -153,7 +159,8 @@ export function TaskModal({ task, onClose, onDeleted }: TaskModalProps) {
           toast({ title: 'Task saved', tone: 'success' });
           onClose();
         },
-        onError: (error) => toast({ title: 'Could not save', description: error.message, tone: 'error' }),
+        onError: (error) =>
+          toast({ title: 'Could not save', description: error.message, tone: 'error' }),
       },
     );
   };
@@ -173,13 +180,29 @@ export function TaskModal({ task, onClose, onDeleted }: TaskModalProps) {
   return (
     <Modal isOpen onClose={onClose} size="lg" showCloseButton aria-label="Task details">
       <ModalHeader>
-        <Inline gap={3} align="center" justify="between">
+        <Inline gap={3} align="center">
           <Heading level={2} visualLevel={4}>
             Task
           </Heading>
           <Inline gap={2} align="center">
-            <Badge variant="solid">{preview}</Badge>
-            <BucketBadge bucket={bucketFor(preview, scoring.thresholds)} />
+            <Tooltip
+              className="atlas-score-tip"
+              placement="bottom"
+              content="Live priority score from impact, urgency, confidence, and effort."
+            >
+              <span className="atlas-score-trigger" tabIndex={-1} aria-label={`Score ${preview}`}>
+                <Badge variant="solid">{preview}</Badge>
+              </span>
+            </Tooltip>
+            <Tooltip
+              className="atlas-score-tip"
+              placement="bottom"
+              content="Priority band for this score: Now, Next, Later, or Someday."
+            >
+              <span className="atlas-score-trigger" tabIndex={-1} aria-label={`Priority ${bucket}`}>
+                <BucketBadge bucket={bucket} />
+              </span>
+            </Tooltip>
           </Inline>
         </Inline>
       </ModalHeader>
@@ -187,7 +210,9 @@ export function TaskModal({ task, onClose, onDeleted }: TaskModalProps) {
       <ModalBody>
         <Stack gap={4}>
           {inArchivedProject ? (
-            <Alert tone="info">This task is in an archived project. Restore the project to edit it.</Alert>
+            <Alert tone="info">
+              This task is in an archived project. Restore the project to edit it.
+            </Alert>
           ) : viewOnlyProject ? (
             <Alert tone="info">You have view-only access to this task&rsquo;s project.</Alert>
           ) : isArchivedTask ? (
@@ -231,7 +256,9 @@ export function TaskModal({ task, onClose, onDeleted }: TaskModalProps) {
                 options={[
                   { value: '', label: 'No project' },
                   ...(projects ?? [])
-                    .filter((project) => canEditProject(project, session) || project.id === projectId)
+                    .filter(
+                      (project) => canEditProject(project, session) || project.id === projectId,
+                    )
                     .map((project) => ({
                       value: project.id,
                       label: project.name,
@@ -285,7 +312,9 @@ export function TaskModal({ task, onClose, onDeleted }: TaskModalProps) {
                 onValueChange={(value) => setConfidence(toConfidence(Number(value)))}
               />
             </FormField>
+          </Inline>
 
+          <Inline gap={3} align="start">
             <FormField label="Urgency" hint="Auto uses the due date">
               <Select
                 value={urgencyOverride == null ? '' : String(urgencyOverride)}
@@ -296,7 +325,7 @@ export function TaskModal({ task, onClose, onDeleted }: TaskModalProps) {
             </FormField>
           </Inline>
 
-          <Inline gap={3} align="start">
+          <Inline gap={5} align="start">
             <FormField label="Start date" hint="Drives urgency before you start">
               <DatePicker
                 value={parseIsoDate(dueStartDate)}
@@ -329,7 +358,9 @@ export function TaskModal({ task, onClose, onDeleted }: TaskModalProps) {
 
           <Text size="sm">
             Created {new Date(task.createdAt).toLocaleDateString()}
-            {task.completedAt ? `, completed ${new Date(task.completedAt).toLocaleDateString()}` : ''}
+            {task.completedAt
+              ? `, completed ${new Date(task.completedAt).toLocaleDateString()}`
+              : ''}
           </Text>
         </Stack>
       </ModalBody>
@@ -337,7 +368,7 @@ export function TaskModal({ task, onClose, onDeleted }: TaskModalProps) {
       <ModalFooter>
         {actionsHidden ? (
           <Inline gap={2} justify="end" style={{ inlineSize: '100%' }}>
-            <Button variant="solid" onClick={onClose}>
+            <Button className="atlas-button" size="md" variant="solid" onClick={onClose}>
               Close
             </Button>
           </Inline>
@@ -345,29 +376,55 @@ export function TaskModal({ task, onClose, onDeleted }: TaskModalProps) {
           <Inline gap={2} align="center" justify="between" style={{ inlineSize: '100%' }}>
             {confirmingDelete ? (
               <Inline gap={2} align="center">
-                <Button variant="solid" onClick={destroy} disabled={remove.isPending}>
-                  Confirm delete
+                <Button
+                  className="atlas-button"
+                  size="md"
+                  variant="solid"
+                  onClick={destroy}
+                  disabled={remove.isPending}
+                >
+                  <IconLabel icon={ACTION_ICONS.delete}>Confirm delete</IconLabel>
                 </Button>
-                <Button variant="ghost" onClick={() => setConfirmingDelete(false)}>
+                <Button
+                  className="atlas-button"
+                  size="md"
+                  variant="ghost"
+                  onClick={() => setConfirmingDelete(false)}
+                >
                   Keep
                 </Button>
               </Inline>
             ) : (
-              <Button variant="ghost" onClick={() => setConfirmingDelete(true)}>
-                Delete
+              <Button
+                className="atlas-button"
+                size="md"
+                variant="ghost"
+                onClick={() => setConfirmingDelete(true)}
+              >
+                <IconLabel icon={ACTION_ICONS.delete}>Delete</IconLabel>
               </Button>
             )}
 
             <Inline gap={2} align="center">
-              <Button variant="ghost" onClick={onClose}>
+              <Button className="atlas-button" size="md" variant="ghost" onClick={onClose}>
                 Cancel
               </Button>
               {isArchivedTask ? (
-                <Button variant="solid" onClick={restore} disabled={update.isPending}>
-                  {update.isPending ? 'Restoring...' : 'Restore'}
+                <Button
+                  className="atlas-button"
+                  size="md"
+                  variant="solid"
+                  onClick={restore}
+                  disabled={update.isPending}
+                >
+                  <IconLabel icon={ACTION_ICONS.restore}>
+                    {update.isPending ? 'Restoring...' : 'Restore'}
+                  </IconLabel>
                 </Button>
               ) : (
                 <Button
+                  className="atlas-button"
+                  size="md"
                   variant="solid"
                   onClick={save}
                   disabled={update.isPending || title.trim() === ''}

@@ -2,6 +2,7 @@ import {
   Button,
   ConfirmDialog,
   Heading,
+  Icon,
   Inline,
   Input,
   Menu,
@@ -17,9 +18,10 @@ import {
 } from '@astrabound/duality';
 import type { UpdateUserInput, UserSummaryDto } from '@atlas/shared';
 import { useState } from 'react';
-import { RiMore2Fill } from 'react-icons/ri';
 
 import { generateTempPassword, useDeleteUser, useUpdateUser } from '../../lib/admin.ts';
+import { ACTION_ICONS } from '../../lib/icons.ts';
+import { IconLabel } from '../IconLabel.tsx';
 
 interface PersonRowActionsProps {
   person: UserSummaryDto;
@@ -102,11 +104,13 @@ export function PersonRowActions({ person, isSelf, isLastAdmin, onEdit }: Person
             aria-label={`Actions for ${person.displayName}`}
             className="atlas-action-menu-button"
           >
-            <RiMore2Fill aria-hidden />
+            <Icon icon={ACTION_ICONS.more} />
           </Button>
         }
       >
-        <MenuItem onSelect={onEdit}>Edit</MenuItem>
+        <MenuItem onSelect={onEdit}>
+          <IconLabel icon={ACTION_ICONS.edit}>Edit</IconLabel>
+        </MenuItem>
 
         {person.role === 'admin' ? (
           <MenuItem
@@ -114,15 +118,17 @@ export function PersonRowActions({ person, isSelf, isLastAdmin, onEdit }: Person
             title={isLastAdmin ? 'Atlas needs at least one active admin.' : undefined}
             onSelect={() => setConfirm('demote')}
           >
-            Make member
+            <IconLabel icon={ACTION_ICONS.role}>Make member</IconLabel>
           </MenuItem>
         ) : (
           <MenuItem onSelect={() => patch({ role: 'admin' }, `${person.displayName} is now an admin`)}>
-            Make admin
+            <IconLabel icon={ACTION_ICONS.role}>Make admin</IconLabel>
           </MenuItem>
         )}
 
-        <MenuItem onSelect={resetPassword}>Reset password</MenuItem>
+        <MenuItem onSelect={resetPassword}>
+          <IconLabel icon={ACTION_ICONS.resetPassword}>Reset password</IconLabel>
+        </MenuItem>
 
         <MenuSeparator />
 
@@ -131,9 +137,11 @@ export function PersonRowActions({ person, isSelf, isLastAdmin, onEdit }: Person
             <MenuItem
               onSelect={() => patch({ disabled: false }, `${person.displayName} re-enabled`)}
             >
-              Enable
+              <IconLabel icon={ACTION_ICONS.enable}>Enable</IconLabel>
             </MenuItem>
-            <MenuItem onSelect={() => setConfirm('delete')}>Delete</MenuItem>
+            <MenuItem onSelect={() => setConfirm('delete')}>
+              <IconLabel icon={ACTION_ICONS.delete}>Delete</IconLabel>
+            </MenuItem>
           </>
         ) : (
           <MenuItem
@@ -141,7 +149,7 @@ export function PersonRowActions({ person, isSelf, isLastAdmin, onEdit }: Person
             title={disableReason}
             onSelect={() => setConfirm('disable')}
           >
-            Disable
+            <IconLabel icon={ACTION_ICONS.disable}>Disable</IconLabel>
           </MenuItem>
         )}
       </Menu>
@@ -200,7 +208,7 @@ export function PersonRowActions({ person, isSelf, isLastAdmin, onEdit }: Person
             <Inline gap={2} align="center">
               <Input readOnly value={tempPassword ?? ''} aria-label="Temporary password" />
               <Button type="button" variant="ghost" size="sm" onClick={() => void copyPassword()}>
-                Copy
+                <IconLabel icon={ACTION_ICONS.copy}>Copy</IconLabel>
               </Button>
             </Inline>
           </Stack>

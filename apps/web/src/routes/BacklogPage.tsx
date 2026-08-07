@@ -1,9 +1,11 @@
-import { Button, EmptyState, Stack } from '@astrabound/duality';
+import { Button, EmptyState, Icon, Inline, Stack } from '@astrabound/duality';
 
-import { FilterBar } from '../components/FilterBar.tsx';
+import { TaskFilterToolbar } from '../components/FilterToolbar.tsx';
+import { IconLabel } from '../components/IconLabel.tsx';
 import { PageHeader } from '../components/PageHeader.tsx';
 import { TaskTable } from '../components/TaskTable.tsx';
 import { useFilters } from '../lib/filters.ts';
+import { ACTION_ICONS } from '../lib/icons.ts';
 import { useQuickAdd } from '../lib/quick-add.ts';
 import { useTasks } from '../lib/tasks.ts';
 
@@ -18,19 +20,31 @@ export function BacklogPage() {
         title="Backlog"
         count={tasks?.length}
         actions={
-          <Button variant="solid" onClick={() => openQuickAdd()}>
-            New task
-          </Button>
+          <Inline gap={2} align="center">
+            <TaskFilterToolbar filters={filters} />
+            <Button
+              className="atlas-button"
+              size="md"
+              variant="solid"
+              onClick={() => openQuickAdd()}
+            >
+              <IconLabel icon={ACTION_ICONS.create}>New task</IconLabel>
+            </Button>
+          </Inline>
         }
       />
-
-      <FilterBar filters={filters} />
 
       <TaskTable
         query={filters.query}
         ariaLabel="Ranked backlog"
         emptyState={
           <EmptyState
+            icon={
+              <Icon
+                icon={filters.isFiltered ? ACTION_ICONS.noResults : ACTION_ICONS.task}
+                size="lg"
+              />
+            }
             title={filters.isFiltered ? 'Nothing matches' : 'No tasks yet'}
             description={
               filters.isFiltered
@@ -39,8 +53,13 @@ export function BacklogPage() {
             }
             action={
               filters.isFiltered ? null : (
-                <Button variant="solid" onClick={() => openQuickAdd()}>
-                  New task
+                <Button
+                  className="atlas-button"
+                  size="lg"
+                  variant="solid"
+                  onClick={() => openQuickAdd()}
+                >
+                  <IconLabel icon={ACTION_ICONS.create}>New task</IconLabel>
                 </Button>
               )
             }

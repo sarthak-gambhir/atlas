@@ -3,6 +3,10 @@
  * pseudo-classes and sticky layering. Everything else stays in Duality tokens.
  */
 
+:root {
+  --minimal-padding: 2px;
+}
+
 @font-face {
   font-family: 'Reddit Mono';
   src: url('/fonts/RedditMono.ttf') format('truetype');
@@ -148,6 +152,87 @@ button.atlas-matrix-tile:hover {
   color: var(--bg);
 }
 
+/* Phone matrix: quadrant cards built on Duality Card + Stat; Atlas CSS only for
+ * inverted header/footer, square stats, and shared seams. */
+.atlas-matrix-quadrant-card {
+  display: flex;
+  flex-direction: column;
+  inline-size: 100%;
+  text-align: start;
+  padding: 0;
+  min-inline-size: 200px;
+}
+
+.atlas-matrix-quadrant-card .du_card_header,
+.atlas-matrix-quadrant-card .du_card_footer {
+  padding: var(--space-2) var(--space-3);
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.atlas-matrix-quadrant-card .du_card_footer {
+  flex: 1;
+}
+
+/* Unified search/filter panel in Popover or Modal. */
+.atlas-filter-panel {
+  min-inline-size: 18rem;
+  max-inline-size: 22rem;
+  margin: 1rem auto;
+}
+
+/* Duality Select listboxes are absolute (not portaled). Modal + ModalBody
+ * default to overflow clipping, which cuts off the last dropdown. The filter
+ * panel is short enough to skip body scroll — let the list escape. */
+.atlas-filter-modal.du_modal,
+.atlas-filter-modal .du_modal_body {
+  overflow: visible;
+}
+
+.atlas-matrix-quadrant-card .atlas-matrix-quadrant-card__body {
+  padding: 0;
+  flex: 1;
+}
+
+.atlas-matrix-quadrant-card .du_stat {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border: 0;
+  border-radius: 0;
+  padding: var(--space-5) var(--space-2);
+}
+
+.atlas-matrix-quadrant-card .du_stat_value {
+  font-size: var(--font-size-2);
+}
+
+.atlas-matrix-quadrant-card .du_stat:nth-child(odd) {
+  border-inline-end: var(--border-width) solid var(--fg);
+}
+
+.atlas-matrix-quadrant-card .du_stat:nth-child(-n + 2) {
+  border-block-end: var(--border-width) solid var(--fg);
+}
+
+.atlas-matrix-quadrant-card.du_card_interactive:hover {
+  color: var(--fg);
+  background-color: var(--bg);
+  outline: var(--border-width) solid var(--fg);
+  outline-offset: -3px;
+}
+
+.atlas-matrix-quadrant-card.du_card_interactive:hover .du_card_header,
+.atlas-matrix-quadrant-card.du_card_interactive:hover .du_card_footer {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.atlas-matrix-quadrant-card.du_card_interactive:focus-visible {
+  outline: var(--border-width) solid var(--fg);
+  outline-offset: 2px;
+}
+
 /* The score breakdown tooltip lives inside a Modal. Duality gives tooltips a
  * lower z-index than modals (so it would open behind the modal), and paints
  * them inverted with no wrapping. Lift it over the modal and restore the plain
@@ -169,6 +254,7 @@ button.atlas-matrix-tile:hover {
 
 .atlas-score-trigger {
   cursor: default;
+  user-select: none;
 }
 
 /* When a table row inverts (hover, focus, or selected) its cells flip to a
@@ -194,6 +280,13 @@ button.atlas-matrix-tile:hover {
  * stay put while content pans. */
 .atlas-main {
   overflow-y: auto;
+}
+
+/* Duality sets .du_table { inline-size: 100% }, which makes the table match the
+ * scroll pane and never overflow. Size to content so the pane can scroll. */
+.atlas-main .du_data_table_scroll .du_table {
+  inline-size: max-content;
+  min-inline-size: 100%;
 }
 
 /* Pinned above the scrolling content but below Duality overlays (--z-popover is 900). */
@@ -225,18 +318,21 @@ button.atlas-matrix-tile:hover {
 /* Priority buckets in a two-color theme: `now` stays filled (loudest) while the
  * outlined buckets step down through solid, dashed, and dotted borders. The
  * compound selector keeps these above Duality's base `.du_badge` border. */
-.du_badge.bucket-badge-next {
-  border-style: double;
-  border-width: 5px;
-  padding: 0 var(--space-3) 0 calc(var(--space-3) - 3px);
-}
+.atlas-bucket-badge {
+  padding: 0 var(--space-2) 0 var(--space-1);
 
-.du_badge.bucket-badge-later {
-  border-style: solid;
-}
+  &.du_badge.bucket-badge-next {
+    border-style: double;
+    border-width: 5px;
+  }
 
-.du_badge.bucket-badge-someday {
-  border-style: dotted;
+  &.du_badge.bucket-badge-later {
+    border-style: solid;
+  }
+
+  &.du_badge.bucket-badge-someday {
+    border-style: dotted;
+  }
 }
 
 /* Palette swatches: each tile paints itself in that palette's own two colors
@@ -432,6 +528,26 @@ a.atlas-record-card:focus-visible {
   align-items: center;
 }
 
+.atlas-button {
+  padding: var(--space-2) var(--space-4);
+
+  &.atlas-icon-button {
+    padding: var(--space-2);
+    .du_text {
+      line-height: 1;
+    }
+  }
+  &.atlas-button-sm {
+    padding: var(--space-1) var(--space-2);
+  }
+
+  &.atlas-account-item {
+    justify-content: flex-start;
+    inline-size: 100%;
+    padding: var(--space-2) var(--space-1);
+  }
+}
+
 /* Phone layout: the sidebar is gone (a Drawer takes over), so tighten the shell
  * padding and let the nav drawer's list breathe. */
 @media (max-width: 767.98px) {
@@ -447,6 +563,15 @@ a.atlas-record-card:focus-visible {
 
   .atlas-main {
     padding: var(--space-3);
+  }
+}
+
+@media screen and (max-width: 1024px) {
+  .atlas-matrix-tile--cell {
+    grid-template-columns: 1fr;
+    .atlas-matrix-cell__block {
+      padding: var(--minimal-padding);
+    }
   }
 }
 

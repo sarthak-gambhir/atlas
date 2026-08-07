@@ -1,6 +1,7 @@
 import {
   Button,
   ConfirmDialog,
+  Icon,
   Menu,
   MenuItem,
   MenuSeparator,
@@ -8,9 +9,10 @@ import {
 } from '@astrabound/duality';
 import type { ProjectDto } from '@atlas/shared';
 import { useState } from 'react';
-import { RiMore2Fill } from 'react-icons/ri';
 
+import { ACTION_ICONS } from '../../lib/icons.ts';
 import { useDeleteProject, useUpdateProject } from '../../lib/organization.ts';
+import { IconLabel } from '../IconLabel.tsx';
 
 interface ProjectRowActionsProps {
   project: ProjectDto;
@@ -80,19 +82,23 @@ export function ProjectRowActions({
         trigger={
           <Button
             variant="inverse"
-            size="sm"
+            size="md"
+            className="atlas-button atlas-icon-button atlas-action-menu-button"
             aria-label={`Actions for ${project.name}`}
-            className="atlas-action-menu-button"
           >
-            <RiMore2Fill aria-hidden />
+            <Icon icon={ACTION_ICONS.more} />
           </Button>
         }
       >
         {canManage ? (
           <>
-            <MenuItem onSelect={onEdit}>Edit</MenuItem>
+            <MenuItem onSelect={onEdit}>
+              <IconLabel icon={ACTION_ICONS.edit}>Edit</IconLabel>
+            </MenuItem>
             <MenuItem onSelect={() => setArchived(!archived)}>
-              {archived ? 'Restore' : 'Archive'}
+              <IconLabel icon={archived ? ACTION_ICONS.restore : ACTION_ICONS.archive}>
+                {archived ? 'Restore' : 'Archive'}
+              </IconLabel>
             </MenuItem>
           </>
         ) : null}
@@ -100,7 +106,9 @@ export function ProjectRowActions({
         {isAdmin ? (
           <>
             {canManage ? <MenuSeparator /> : null}
-            <MenuItem onSelect={() => setConfirmingDelete(true)}>Delete</MenuItem>
+            <MenuItem onSelect={() => setConfirmingDelete(true)}>
+              <IconLabel icon={ACTION_ICONS.delete}>Delete</IconLabel>
+            </MenuItem>
           </>
         ) : null}
       </Menu>

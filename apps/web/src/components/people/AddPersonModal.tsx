@@ -16,6 +16,8 @@ import { USER_ROLES, type UserRole } from '@atlas/shared';
 import { useState, type FormEvent } from 'react';
 
 import { useCreateUser } from '../../lib/admin.ts';
+import { ACTION_ICONS } from '../../lib/icons.ts';
+import { IconLabel } from '../IconLabel.tsx';
 
 interface AddPersonModalProps {
   isOpen: boolean;
@@ -82,10 +84,7 @@ export function AddPersonModal({ isOpen, onClose }: AddPersonModalProps) {
             </FormField>
 
             <FormField label="Display name" required>
-              <Input
-                value={displayName}
-                onChange={(event) => setDisplayName(event.target.value)}
-              />
+              <Input value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
             </FormField>
 
             <FormField label="Password" hint="At least 8 characters" required>
@@ -96,8 +95,16 @@ export function AddPersonModal({ isOpen, onClose }: AddPersonModalProps) {
                   autoComplete="new-password"
                   onChange={(event) => setPassword(event.target.value)}
                 />
-                <Button type="button" variant="ghost" size="sm" onClick={() => setReveal((on) => !on)}>
-                  {reveal ? 'Hide' : 'Show'}
+                <Button
+                  className="atlas-button atlas-button-sm"
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setReveal((on) => !on)}
+                >
+                  <IconLabel icon={reveal ? ACTION_ICONS.hide : ACTION_ICONS.reveal}>
+                    {reveal ? 'Hide' : 'Show'}
+                  </IconLabel>
                 </Button>
               </Inline>
             </FormField>
@@ -114,12 +121,20 @@ export function AddPersonModal({ isOpen, onClose }: AddPersonModalProps) {
 
         <ModalFooter>
           <Inline gap={2} justify="end">
-            <Button type="button" variant="ghost" onClick={close}>
+            <Button
+              className="atlas-button"
+              type="button"
+              variant="ghost"
+              size="md"
+              onClick={close}
+            >
               Cancel
             </Button>
             <Button
+              className="atlas-button"
               type="submit"
               variant="solid"
+              size="md"
               disabled={
                 createUser.isPending ||
                 username.trim() === '' ||

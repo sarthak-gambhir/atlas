@@ -1,6 +1,7 @@
 import {
   Alert,
   Badge,
+  Box,
   Button,
   Checkbox,
   DataTable,
@@ -18,9 +19,11 @@ import { useNavigate } from 'react-router';
 
 import { BucketBadge } from './BucketBadge.tsx';
 import { BulkActionBar } from './BulkActionBar.tsx';
+import { IconLabel } from './IconLabel.tsx';
 import { ScoreCell } from './ScoreCell.tsx';
+import { StatusBadge } from './StatusBadge.tsx';
 import { dueLabel } from '../lib/dates.ts';
-import { STATUS_LABELS } from '../lib/labels.ts';
+import { ACTION_ICONS } from '../lib/icons.ts';
 import { useCompleteTask, useTasks, useUpdateTask } from '../lib/tasks.ts';
 import { useIsMobile } from '../lib/useIsMobile.ts';
 
@@ -77,8 +80,9 @@ export function TaskTable({
       if (task.status === 'archived') {
         return (
           <Button
-            size="sm"
-            variant="inverse"
+            className="atlas-button"
+            size="md"
+            variant="solid"
             onClick={(event) => {
               event.stopPropagation();
               // A previously completed task returns to done; otherwise it goes
@@ -97,7 +101,7 @@ export function TaskTable({
               );
             }}
           >
-            Restore
+            <IconLabel icon={ACTION_ICONS.restore}>Restore</IconLabel>
           </Button>
         );
       }
@@ -105,8 +109,9 @@ export function TaskTable({
       if (task.status === 'done') {
         return (
           <Button
-            size="sm"
-            variant="inverse"
+            className="atlas-button"
+            size="md"
+            variant="solid"
             onClick={(event) => {
               event.stopPropagation();
               update.mutate(
@@ -123,15 +128,16 @@ export function TaskTable({
               );
             }}
           >
-            Archive
+            <IconLabel icon={ACTION_ICONS.archive}>Archive</IconLabel>
           </Button>
         );
       }
 
       return (
         <Button
-          size="sm"
-          variant="inverse"
+          className="atlas-button"
+          size="md"
+          variant="solid"
           onClick={(event) => {
             event.stopPropagation();
             complete.mutate(task.id, {
@@ -139,7 +145,7 @@ export function TaskTable({
             });
           }}
         >
-          Done
+          <IconLabel icon={ACTION_ICONS.complete}>Done</IconLabel>
         </Button>
       );
     },
@@ -225,7 +231,7 @@ export function TaskTable({
         header: 'Status',
         value: (task) => task.status,
         sortable: true,
-        cell: (task) => <Text size="sm">{STATUS_LABELS[task.status]}</Text>,
+        cell: (task) => <StatusBadge status={task.status} />,
       },
       {
         id: 'completed',
@@ -292,6 +298,7 @@ export function TaskTable({
             filterable={false}
             isLoading={isPending}
             emptyMessage="No tasks match."
+            stickyHeader
             onRowClick={(task) => {
               if (skipRowClickRef.current) return;
               void navigate(`/tasks/${task.id}`);
@@ -399,16 +406,23 @@ function TaskCardList({
             </div>
 
             <div className="atlas-task-card__body">
-              <div className="atlas-task-card__section">
+              <Box
+                className="atlas-task-card__section"
+                style={{ background: 'var(--fg)', color: 'var(--bg)' }}
+              >
                 <Inline gap={2} align="center" wrap>
                   <Text weight="bold">{task.title}</Text>
                   {label.lateStart ? (
-                    <Badge size="sm" variant="outline">
+                    <Badge
+                      size="sm"
+                      variant="outline"
+                      style={{ color: 'var(--fg)', borderColor: 'var(--bg)' }}
+                    >
                       Should have started
                     </Badge>
                   ) : null}
                 </Inline>
-              </div>
+              </Box>
 
               <div className="atlas-task-card__section atlas-task-card__facts">
                 <div className="atlas-task-card__fact">
@@ -466,9 +480,7 @@ function TaskCardList({
                 <Inline gap={2} align="center" justify="between">
                   <Inline gap={2} align="center">
                     <Text size="sm">Status:</Text>
-                    <Text size="sm" weight="bold">
-                      {STATUS_LABELS[task.status]}
-                    </Text>
+                    <StatusBadge status={task.status} />
                   </Inline>
                   {renderAction(task)}
                 </Inline>

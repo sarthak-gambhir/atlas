@@ -175,6 +175,22 @@ describe('computeScore', () => {
     expect(frozen).toBeLessThan(asOpen);
   });
 
+  it('accepts a full ISO completedAt timestamp (DTO shape)', () => {
+    const dateOnly = task({
+      status: 'done',
+      dueEndDate: '2026-01-02',
+      completedAt: '2026-01-01',
+    });
+    const fullIso = task({
+      status: 'done',
+      dueEndDate: '2026-01-02',
+      completedAt: '2026-01-01T02:38:00.000Z',
+    });
+    expect(computeScore(fullIso, DEFAULT_SCORING, TODAY)).toBe(
+      computeScore(dateOnly, DEFAULT_SCORING, TODAY),
+    );
+  });
+
   it('drops an archived-uncompleted task to the urgency floor', () => {
     const late = task({ status: 'archived', dueEndDate: '2000-01-01', completedAt: null });
     const undated = task({ status: 'archived', dueEndDate: null, completedAt: null });

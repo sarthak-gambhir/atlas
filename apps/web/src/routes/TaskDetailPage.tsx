@@ -4,19 +4,22 @@ import {
   Divider,
   EmptyState,
   Heading,
+  Icon,
   Inline,
   Stack,
   Text,
 } from '@astrabound/duality';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
-import { RiArrowLeftLine } from 'react-icons/ri';
 import { Link, useNavigate, useParams } from 'react-router';
 
 import { BucketBadge } from '../components/BucketBadge.tsx';
+import { IconLabel } from '../components/IconLabel.tsx';
+import { StatusBadge } from '../components/StatusBadge.tsx';
 import { TaskModal } from '../components/TaskModal.tsx';
 import { dueLabel } from '../lib/dates.ts';
-import { CONFIDENCE_LABELS, STATUS_LABELS } from '../lib/labels.ts';
+import { ACTION_ICONS } from '../lib/icons.ts';
+import { CONFIDENCE_LABELS } from '../lib/labels.ts';
 import { useProjects, useUsers } from '../lib/organization.ts';
 import { useTask } from '../lib/tasks.ts';
 
@@ -32,7 +35,7 @@ export function TaskDetailPage() {
   const backLink = (
     <Link to="/" className="atlas-card-link">
       <Inline gap={1} align="center">
-        <RiArrowLeftLine aria-hidden />
+        <Icon icon={ACTION_ICONS.back} />
         <Text size="sm">Backlog</Text>
       </Inline>
     </Link>
@@ -46,11 +49,14 @@ export function TaskDetailPage() {
           <Text>Loading task...</Text>
         ) : (
           <EmptyState
+            icon={<Icon icon={ACTION_ICONS.warning} size={64} />}
             title="Task not found"
             description="It may have been deleted, or you don't have access to it."
             action={
               <Link to="/" className="atlas-card-link">
-                <Button variant="solid">Back to backlog</Button>
+                <Button className="atlas-button" size="md" variant="solid">
+                  <IconLabel icon={ACTION_ICONS.back}>Back to backlog</IconLabel>
+                </Button>
               </Link>
             }
           />
@@ -68,7 +74,7 @@ export function TaskDetailPage() {
       <Inline gap={3} align="center" justify="between" wrap>
         {backLink}
         <Button variant="solid" onClick={() => setEditing(true)}>
-          Edit
+          <IconLabel icon={ACTION_ICONS.edit}>Edit</IconLabel>
         </Button>
       </Inline>
 
@@ -79,7 +85,7 @@ export function TaskDetailPage() {
         <Inline gap={2} align="center">
           <Badge variant="solid">{task.score}</Badge>
           <BucketBadge bucket={task.bucket} />
-          <Badge variant="outline">{STATUS_LABELS[task.status]}</Badge>
+          <StatusBadge status={task.status} />
         </Inline>
       </Stack>
 

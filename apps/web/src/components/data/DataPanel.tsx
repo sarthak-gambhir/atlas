@@ -3,6 +3,7 @@ import {
   Code,
   Divider,
   Heading,
+  Icon,
   Inline,
   Stack,
   Stat,
@@ -10,10 +11,10 @@ import {
   Text,
   useToast,
 } from '@astrabound/duality';
-import { RiDownloadLine } from 'react-icons/ri';
 import { useState } from 'react';
 
 import { downloadBackup } from '../../lib/admin.ts';
+import { ACTION_ICONS } from '../../lib/icons.ts';
 import { useProjects, useTags, useUsers } from '../../lib/organization.ts';
 import { useTasks } from '../../lib/tasks.ts';
 import { DangerZone } from './DangerZone.tsx';
@@ -62,16 +63,16 @@ export function DataPanel() {
             Export
           </Heading>
           <Text size="sm">
-            Downloads a plain JSON snapshot of projects, tasks, tags and scoring settings. Everything
-            is named rather than referenced by id, so it can be restored into a fresh database.
-            Passwords are never included.
+            Downloads a plain JSON snapshot of projects, tasks, tags and scoring settings.
+            Everything is named rather than referenced by id, so it can be restored into a fresh
+            database. Passwords are never included.
           </Text>
         </Stack>
 
         <Inline gap={3} align="center">
-          <Button variant="solid" onClick={onExport}>
+          <Button className="atlas-button" variant="solid" size="md" onClick={onExport}>
             <Inline gap={2} align="center">
-              <RiDownloadLine aria-hidden />
+              <Icon icon={ACTION_ICONS.export} />
               Download export
             </Inline>
           </Button>

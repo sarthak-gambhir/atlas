@@ -14,6 +14,7 @@ import {
   Select,
   Stack,
   TagInput,
+  Tooltip,
   useToast,
 } from '@astrabound/duality';
 import {
@@ -95,7 +96,9 @@ export function QuickAddModal({ onClose, initialProjectId = '' }: QuickAddModalP
   const assigneeOptions = [
     { value: '', label: 'Unassigned' },
     ...(users ?? [])
-      .filter((user) => (memberIds ? memberIds.has(user.id) : !user.disabled) || user.id === assigneeId)
+      .filter(
+        (user) => (memberIds ? memberIds.has(user.id) : !user.disabled) || user.id === assigneeId,
+      )
       .map((user) => ({ value: user.id, label: user.displayName })),
   ];
 
@@ -125,6 +128,7 @@ export function QuickAddModal({ onClose, initialProjectId = '' }: QuickAddModalP
     scoring,
     todayIso(),
   );
+  const bucket = bucketFor(preview, scoring.thresholds);
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -153,16 +157,36 @@ export function QuickAddModal({ onClose, initialProjectId = '' }: QuickAddModalP
   };
 
   return (
-    <Modal isOpen onClose={onClose} size="md" showCloseButton aria-label="New task">
+    <Modal isOpen onClose={onClose} size="lg" showCloseButton aria-label="New task">
       <form onSubmit={submit}>
         <ModalHeader>
-          <Inline gap={3} align="center" justify="between">
+          <Inline gap={3} align="center">
             <Heading level={2} visualLevel={4}>
               New task
             </Heading>
             <Inline gap={2} align="center">
-              <Badge variant="solid">{preview}</Badge>
-              <BucketBadge bucket={bucketFor(preview, scoring.thresholds)} />
+              <Tooltip
+                className="atlas-score-tip"
+                placement="bottom"
+                content="Live priority score from impact, urgency, confidence, and effort."
+              >
+                <span className="atlas-score-trigger" tabIndex={-1} aria-label={`Score ${preview}`}>
+                  <Badge variant="solid">{preview}</Badge>
+                </span>
+              </Tooltip>
+              <Tooltip
+                className="atlas-score-tip"
+                placement="bottom"
+                content="Priority band for this score: Now, Next, Later, or Someday."
+              >
+                <span
+                  className="atlas-score-trigger"
+                  tabIndex={-1}
+                  aria-label={`Priority ${bucket}`}
+                >
+                  <BucketBadge bucket={bucket} />
+                </span>
+              </Tooltip>
             </Inline>
           </Inline>
         </ModalHeader>
@@ -214,7 +238,11 @@ export function QuickAddModal({ onClose, initialProjectId = '' }: QuickAddModalP
               </FormField>
 
               <FormField label="Assignee">
-                <Select value={assigneeId} options={assigneeOptions} onValueChange={setAssigneeId} />
+                <Select
+                  value={assigneeId}
+                  options={assigneeOptions}
+                  onValueChange={setAssigneeId}
+                />
               </FormField>
             </Inline>
 
@@ -229,7 +257,9 @@ export function QuickAddModal({ onClose, initialProjectId = '' }: QuickAddModalP
                   onValueChange={(value) => setConfidence(toConfidence(Number(value)))}
                 />
               </FormField>
+            </Inline>
 
+            <Inline gap={3} align="start">
               <FormField label="Urgency" hint="Auto uses the due date">
                 <Select
                   value={urgencyOverride == null ? '' : String(urgencyOverride)}
@@ -239,7 +269,7 @@ export function QuickAddModal({ onClose, initialProjectId = '' }: QuickAddModalP
               </FormField>
             </Inline>
 
-            <Inline gap={3} align="start">
+            <Inline gap={5} align="start">
               <FormField label="Start date" hint="Drives urgency before you start">
                 <DatePicker
                   value={parseIsoDate(dueStartDate)}
@@ -270,7 +300,11 @@ export function QuickAddModal({ onClose, initialProjectId = '' }: QuickAddModalP
             <Button type="button" variant="ghost" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" variant="solid" disabled={create.isPending || title.trim() === ''}>
+            <Button
+              type="submit"
+              variant="solid"
+              disabled={create.isPending || title.trim() === ''}
+            >
               {create.isPending ? 'Adding...' : 'Add task'}
             </Button>
           </Inline>

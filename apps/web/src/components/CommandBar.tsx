@@ -2,6 +2,7 @@ import { CommandPalette, useToast, type Command } from '@astrabound/duality';
 import { useNavigate } from 'react-router';
 
 import { downloadBackup } from '../lib/admin.ts';
+import { ACTION_ICONS } from '../lib/icons.ts';
 import { NAV_ITEMS } from '../lib/nav.ts';
 import { useLogout } from '../lib/session.ts';
 
@@ -28,6 +29,7 @@ export function CommandBar({ isOpen, onClose, onQuickAdd }: CommandBarProps) {
       id: 'new-task',
       label: 'New task',
       group: 'Actions',
+      icon: ACTION_ICONS.create,
       shortcut: ['N'],
       keywords: ['add', 'create'],
       onSelect: run(onQuickAdd),
@@ -36,6 +38,7 @@ export function CommandBar({ isOpen, onClose, onQuickAdd }: CommandBarProps) {
       id: `go-${item.path}`,
       label: `Go to ${item.label}`,
       group: 'Navigate',
+      icon: item.Icon,
       keywords: [item.label.toLowerCase()],
       onSelect: run(() => void navigate(item.path)),
     })),
@@ -43,6 +46,7 @@ export function CommandBar({ isOpen, onClose, onQuickAdd }: CommandBarProps) {
       id: 'export',
       label: 'Download export',
       group: 'Data',
+      icon: ACTION_ICONS.export,
       keywords: ['backup', 'json', 'save'],
       onSelect: run(() => {
         void downloadBackup().catch((cause: unknown) =>
@@ -58,6 +62,7 @@ export function CommandBar({ isOpen, onClose, onQuickAdd }: CommandBarProps) {
       id: 'sign-out',
       label: 'Sign out',
       group: 'Account',
+      icon: ACTION_ICONS.signOut,
       onSelect: run(() => logout.mutate()),
     },
   ];

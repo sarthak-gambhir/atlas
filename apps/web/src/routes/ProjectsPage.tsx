@@ -1,10 +1,13 @@
-import { Alert, Button, EmptyState, Grid, Inline, Input, Stack } from '@astrabound/duality';
+import { Alert, Button, EmptyState, Grid, Icon, Inline, Stack } from '@astrabound/duality';
 import type { ProjectDto } from '@atlas/shared';
 import { useMemo, useState } from 'react';
 
+import { ProjectFilterToolbar } from '../components/FilterToolbar.tsx';
+import { IconLabel } from '../components/IconLabel.tsx';
 import { PageHeader } from '../components/PageHeader.tsx';
 import { ProjectCard } from '../components/projects/ProjectCard.tsx';
 import { ProjectFormModal } from '../components/projects/ProjectFormModal.tsx';
+import { ACTION_ICONS } from '../lib/icons.ts';
 import { useProjects } from '../lib/organization.ts';
 import { useSession } from '../lib/session.ts';
 
@@ -20,15 +23,24 @@ export function ProjectsPage() {
   const { data: session } = useSession();
   const isAdmin = session?.role === 'admin';
 
+  const trimmedSearch = search.trim();
+  const isFiltered = trimmedSearch !== '' || includeArchived;
+  const activeCount = (trimmedSearch ? 1 : 0) + (includeArchived ? 1 : 0);
+
   const filtered = useMemo(() => {
-    const query = search.trim().toLowerCase();
+    const query = trimmedSearch.toLowerCase();
     if (query === '') return projects ?? [];
     return (projects ?? []).filter(
       (project) =>
         project.name.toLowerCase().includes(query) ||
         (project.description?.toLowerCase().includes(query) ?? false),
     );
-  }, [projects, search]);
+  }, [projects, trimmedSearch]);
+
+  const clearFilters = () => {
+    setSearch('');
+    setIncludeArchived(false);
+  };
 
   return (
     <Stack gap={4}>
@@ -36,41 +48,40 @@ export function ProjectsPage() {
         title="Projects"
         count={projects?.length}
         actions={
-          <Button variant="solid" onClick={() => setForm({})}>
-            New project
-          </Button>
+          <Inline gap={2} align="center">
+            <ProjectFilterToolbar
+              search={search}
+              onSearchChange={setSearch}
+              includeArchived={includeArchived}
+              onIncludeArchivedChange={setIncludeArchived}
+              isFiltered={isFiltered}
+              activeCount={activeCount}
+              onClear={clearFilters}
+            />
+            <Button className="atlas-button" size="md" variant="solid" onClick={() => setForm({})}>
+              <IconLabel icon={ACTION_ICONS.create}>New project</IconLabel>
+            </Button>
+          </Inline>
         }
       />
-
-      <Inline gap={3} align="center" justify="between" wrap>
-        <Input
-          value={search}
-          placeholder="Search projects"
-          clearable
-          aria-label="Search projects"
-          onClear={() => setSearch('')}
-          onChange={(event) => setSearch(event.target.value)}
-          style={{ maxWidth: 320 }}
-        />
-        <Button variant="inverse" onClick={() => setIncludeArchived((previous) => !previous)}>
-          {includeArchived ? 'Hide archived' : 'Show archived'}
-        </Button>
-      </Inline>
 
       {error ? <Alert tone="error">{error.message}</Alert> : null}
 
       {!isPending && filtered.length === 0 ? (
         <EmptyState
-          title={search.trim() ? 'No projects match' : 'No projects yet'}
+          icon={
+            <Icon icon={trimmedSearch ? ACTION_ICONS.noResults : ACTION_ICONS.project} size={64} />
+          }
+          title={trimmedSearch ? 'No projects match' : 'No projects yet'}
           description={
-            search.trim()
+            trimmedSearch
               ? 'Try a different search.'
               : 'Projects are optional: tasks can live without one.'
           }
           action={
-            search.trim() ? null : (
+            trimmedSearch ? null : (
               <Button variant="solid" onClick={() => setForm({})}>
-                New project
+                <IconLabel icon={ACTION_ICONS.create}>New project</IconLabel>
               </Button>
             )
           }

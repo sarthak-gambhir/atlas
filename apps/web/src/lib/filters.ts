@@ -26,6 +26,19 @@ export interface UseFilters {
   /** Only the parts the API cares about, with blanks dropped. */
   query: TaskFilter;
   isFiltered: boolean;
+  /** Number of fields changed away from the page baseline. */
+  activeCount: number;
+}
+
+function countActive(state: FilterState, baseline: FilterState): number {
+  let count = 0;
+  if (state.q.trim() !== baseline.q) count++;
+  if (state.status !== baseline.status) count++;
+  if (state.projectId !== baseline.projectId) count++;
+  if (state.assigneeId !== baseline.assigneeId) count++;
+  if (state.tag !== baseline.tag) count++;
+  if (state.includeClosed !== baseline.includeClosed) count++;
+  return count;
 }
 
 export function useFilters(initial: Partial<FilterState> = {}): UseFilters {
@@ -54,11 +67,14 @@ export function useFilters(initial: Partial<FilterState> = {}): UseFilters {
     state.tag !== baseline.tag ||
     state.includeClosed !== baseline.includeClosed;
 
+  const activeCount = countActive(state, baseline);
+
   return {
     state,
     set: (patch) => setState((previous) => ({ ...previous, ...patch })),
     clear: () => setState(baseline),
     query,
     isFiltered,
+    activeCount,
   };
 }

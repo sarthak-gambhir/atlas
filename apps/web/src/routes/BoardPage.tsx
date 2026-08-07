@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router';
 
 import { BoardBucket } from '../components/board/BoardBucket.tsx';
 import { BoardBucketModal } from '../components/board/BoardBucketModal.tsx';
-import { FilterBar } from '../components/FilterBar.tsx';
+import { TaskFilterToolbar } from '../components/FilterToolbar.tsx';
 import { PageHeader } from '../components/PageHeader.tsx';
 import { todayIso } from '../lib/dates.ts';
 import { useFilters } from '../lib/filters.ts';
@@ -55,9 +55,17 @@ export function BoardPage() {
 
   return (
     <Stack gap={4}>
-      <PageHeader title="Board" />
-
-      <FilterBar filters={filters} showStatus={false} showClosedToggle={false} excludeArchived />
+      <PageHeader
+        title="Board"
+        actions={
+          <TaskFilterToolbar
+            filters={filters}
+            showStatus={false}
+            showClosedToggle={false}
+            excludeArchived
+          />
+        }
+      />
 
       <StatGroup>
         <Stat label="Open" value={stats.open} />

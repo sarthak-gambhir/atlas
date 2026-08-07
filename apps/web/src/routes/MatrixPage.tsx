@@ -1,42 +1,54 @@
-import {
-  Alert,
-  Badge,
-  Card,
-  CardBody,
-  CardHeader,
-  Grid,
-  Heading,
-  Inline,
-  Skeleton,
-  Stack,
-  Stat,
-  StatGroup,
-  Text,
-} from '@astrabound/duality';
+import { Alert, Box, Grid, Skeleton, Stack, Stat, StatGroup, Text } from '@astrabound/duality';
 import type { TaskDto } from '@atlas/shared';
 import { useMemo, useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router';
 
-import { FilterBar } from '../components/FilterBar.tsx';
+import { TaskFilterToolbar } from '../components/FilterToolbar.tsx';
 import { MatrixCell } from '../components/matrix/MatrixCell.tsx';
 import { MatrixCellModal } from '../components/matrix/MatrixCellModal.tsx';
+import {
+  MatrixQuadrantCard,
+  type QuadrantStats,
+} from '../components/matrix/MatrixQuadrantCard.tsx';
+import { MatrixQuadrantModal } from '../components/matrix/MatrixQuadrantModal.tsx';
+import { statsForQuadrant } from '../components/matrix/quadrantStats.ts';
 import { PageHeader } from '../components/PageHeader.tsx';
 import { useFilters } from '../lib/filters.ts';
 import { useTasks } from '../lib/tasks.ts';
 import { useIsMobile } from '../lib/useIsMobile.ts';
 
-interface CellEntry {
-  impact: number;
-  effort: number;
-  tasks: TaskDto[];
-}
-
 const QUADRANT_META = [
-  { id: 'quickWins', label: 'Quick wins', high: true, low: true },
-  { id: 'bigBets', label: 'Big bets', high: true, low: false },
-  { id: 'fillIns', label: 'Fill-ins', high: false, low: true },
-  { id: 'timeSinks', label: 'Time sinks', high: false, low: false },
+  {
+    id: 'quickWins',
+    label: 'Quick wins',
+    description: 'High impact, low effort — do these first.',
+    high: true,
+    low: true,
+  },
+  {
+    id: 'bigBets',
+    label: 'Big bets',
+    description: 'High impact, high effort — worth the investment.',
+    high: true,
+    low: false,
+  },
+  {
+    id: 'fillIns',
+    label: 'Fill-ins',
+    description: 'Low impact, low effort — nice when you have spare time.',
+    high: false,
+    low: true,
+  },
+  {
+    id: 'timeSinks',
+    label: 'Time sinks',
+    description: 'Low impact, high effort — deprioritize or cut.',
+    high: false,
+    low: false,
+  },
 ] as const;
+
+type QuadrantId = (typeof QUADRANT_META)[number]['id'];
 
 const LEVELS = [1, 2, 3, 4, 5] as const;
 /** High impact at the top, so the cheapest wins sit in the top-left. */
@@ -52,6 +64,7 @@ export function MatrixPage() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [openCell, setOpenCell] = useState<{ impact: number; effort: number } | null>(null);
+  const [openQuadrant, setOpenQuadrant] = useState<QuadrantId | null>(null);
 
   // Group by impact:effort, each list sorted by score so the tile shows the top
   // score and the modal reads the same order.
@@ -67,91 +80,126 @@ export function MatrixPage() {
     return grouped;
   }, [tasks]);
 
-  const quadrants = useMemo(() => {
-    const all = tasks ?? [];
-    return {
-      quickWins: all.filter((t) => isHighImpact(t) && isLowEffort(t)).length,
-      bigBets: all.filter((t) => isHighImpact(t) && !isLowEffort(t)).length,
-      fillIns: all.filter((t) => !isHighImpact(t) && isLowEffort(t)).length,
-      timeSinks: all.filter((t) => !isHighImpact(t) && !isLowEffort(t)).length,
-    };
-  }, [tasks]);
-
-  // The phone layout groups the populated cells into the four quadrants instead
-  // of drawing the 5x5 grid, which can't fit at that width.
-  const quadrantGroups = useMemo(() => {
-    const groups: Record<string, CellEntry[]> = {
+  const quadrantTasks = useMemo(() => {
+    const groups: Record<QuadrantId, TaskDto[]> = {
       quickWins: [],
       bigBets: [],
       fillIns: [],
       timeSinks: [],
     };
-    for (const [key, list] of cells) {
-      const [impact, effort] = key.split(':').map(Number) as [number, number];
-      const high = impact >= 3;
-      const low = effort <= 3;
-      const meta = QUADRANT_META.find((q) => q.high === high && q.low === low)!;
-      groups[meta.id]!.push({ impact, effort, tasks: list });
+    for (const task of tasks ?? []) {
+      const high = isHighImpact(task);
+      const low = isLowEffort(task);
+      if (high && low) groups.quickWins.push(task);
+      else if (high && !low) groups.bigBets.push(task);
+      else if (!high && low) groups.fillIns.push(task);
+      else groups.timeSinks.push(task);
     }
-    for (const entries of Object.values(groups)) {
-      entries.sort((a, b) => (b.tasks[0]?.score ?? 0) - (a.tasks[0]?.score ?? 0));
-    }
+    for (const list of Object.values(groups)) list.sort((a, b) => b.score - a.score);
     return groups;
-  }, [cells]);
+  }, [tasks]);
 
-  const openTasks = openCell
-    ? (cells.get(`${openCell.impact}:${openCell.effort}`) ?? [])
-    : [];
+  const quadrantStats = useMemo(
+    () =>
+      Object.fromEntries(
+        QUADRANT_META.map((meta) => [meta.id, statsForQuadrant(quadrantTasks[meta.id])]),
+      ) as Record<QuadrantId, QuadrantStats>,
+    [quadrantTasks],
+  );
+
+  const openTasks = openCell ? (cells.get(`${openCell.impact}:${openCell.effort}`) ?? []) : [];
+
+  const mobileQuadrantCards = isMobile ? (
+    isPending ? (
+      <Grid minChildWidth={240} gap={3}>
+        {[0, 1, 2, 3].map((i) => (
+          <Skeleton key={i} height={160} />
+        ))}
+      </Grid>
+    ) : (
+      <Grid minChildWidth={240} gap={3}>
+        {QUADRANT_META.map((meta) => (
+          <MatrixQuadrantCard
+            key={meta.id}
+            label={meta.label}
+            description={meta.description}
+            stats={quadrantStats[meta.id]}
+            onClick={() => setOpenQuadrant(meta.id)}
+          />
+        ))}
+      </Grid>
+    )
+  ) : null;
 
   return (
     <Stack gap={4}>
       <PageHeader
         title="Matrix"
-        description="Impact down, effort across. The top-left corner is where the cheap wins live."
+        description={
+          isMobile
+            ? 'Four impact/effort quadrants. Tap one to see its tasks.'
+            : 'Impact down, effort across. The top-left corner is where the cheap wins live.'
+        }
+        actions={<TaskFilterToolbar filters={filters} />}
       />
 
-      <FilterBar filters={filters} />
-
-      <StatGroup>
-        <Stat label="Quick wins" value={quadrants.quickWins} />
-        <Stat label="Big bets" value={quadrants.bigBets} />
-        <Stat label="Fill-ins" value={quadrants.fillIns} />
-        <Stat label="Time sinks" value={quadrants.timeSinks} />
-      </StatGroup>
-
-      <Text size="sm">
-        High impact and low effort is a quick win. Click any cell to see its tasks.
-      </Text>
+      {!isMobile ? (
+        <Text size="sm">
+          High impact and low effort is a quick win. Click any cell to see its tasks.
+        </Text>
+      ) : null}
 
       {error ? <Alert tone="error">{error.message}</Alert> : null}
 
-      {isMobile ? (
-        <Stack gap={3}>
-          {QUADRANT_META.map((meta) => (
-            <QuadrantSection
-              key={meta.id}
-              label={meta.label}
-              entries={quadrantGroups[meta.id] ?? []}
-              isPending={isPending}
-              onOpen={(i, e) => setOpenCell({ impact: i, effort: e })}
-            />
-          ))}
-        </Stack>
-      ) : (
+      {!isMobile ? (
+        <StatGroup>
+          <Stat label="Quick wins" value={quadrantStats.quickWins.count} />
+          <Stat label="Big bets" value={quadrantStats.bigBets.count} />
+          <Stat label="Fill-ins" value={quadrantStats.fillIns.count} />
+          <Stat label="Time sinks" value={quadrantStats.timeSinks.count} />
+        </StatGroup>
+      ) : null}
+
+      {mobileQuadrantCards}
+
+      {!isMobile ? (
         <Grid
           columns={6}
           gap={2}
           align="stretch"
+          justify="center"
           // A narrow first column for the impact labels, five equal effort columns.
           style={{ ['--du-cols']: 'minmax(6rem, auto) repeat(5, minmax(0, 1fr))' } as CSSProperties}
         >
-          <Text size="sm" weight="bold">
-            Impact / Effort
-          </Text>
-          {LEVELS.map((effort) => (
-            <Text key={`head-${effort}`} size="sm" weight="bold" align="center">
-              {effort}
+          <Box
+            paddingX={1}
+            paddingY={1}
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            <Text size="sm" weight="bold">
+              Impact / Effort
             </Text>
+          </Box>
+
+          {LEVELS.map((effort) => (
+            <Box
+              paddingX={1}
+              paddingY={1}
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+              key={`head-${effort}`}
+            >
+              <Text size="sm" weight="bold" align="center">
+                E{effort}
+              </Text>
+            </Box>
           ))}
 
           {IMPACT_ROWS.map((impact) => (
@@ -164,7 +212,7 @@ export function MatrixPage() {
             />
           ))}
         </Grid>
-      )}
+      ) : null}
 
       {openCell ? (
         <MatrixCellModal
@@ -172,6 +220,15 @@ export function MatrixPage() {
           effort={openCell.effort}
           tasks={openTasks}
           onClose={() => setOpenCell(null)}
+          onOpenTask={(id) => void navigate(`/tasks/${id}`)}
+        />
+      ) : null}
+
+      {openQuadrant ? (
+        <MatrixQuadrantModal
+          label={QUADRANT_META.find((meta) => meta.id === openQuadrant)!.label}
+          tasks={quadrantTasks[openQuadrant]}
+          onClose={() => setOpenQuadrant(null)}
           onOpenTask={(id) => void navigate(`/tasks/${id}`)}
         />
       ) : null}
@@ -190,9 +247,19 @@ interface MatrixRowProps {
 function MatrixRow({ impact, cells, isPending, onOpen }: MatrixRowProps) {
   return (
     <>
-      <Text size="sm" weight="bold">
-        {impact}
-      </Text>
+      <Box
+        paddingX={1}
+        paddingY={1}
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
+        <Text size="md" weight="bold" align="center">
+          I{impact}
+        </Text>
+      </Box>
 
       {LEVELS.map((effort) =>
         isPending ? (
@@ -208,60 +275,5 @@ function MatrixRow({ impact, cells, isPending, onOpen }: MatrixRowProps) {
         ),
       )}
     </>
-  );
-}
-
-interface QuadrantSectionProps {
-  label: string;
-  entries: CellEntry[];
-  isPending: boolean;
-  onOpen: (impact: number, effort: number) => void;
-}
-
-/** One quadrant on the phone layout: a card listing its populated cells. */
-function QuadrantSection({ label, entries, isPending, onOpen }: QuadrantSectionProps) {
-  const total = entries.reduce((sum, entry) => sum + entry.tasks.length, 0);
-
-  return (
-    <Card>
-      <CardHeader>
-        <Inline gap={2} align="center" justify="between">
-          <Heading level={2} visualLevel={5}>
-            {label}
-          </Heading>
-          <Badge variant="outline">{total}</Badge>
-        </Inline>
-      </CardHeader>
-      <CardBody>
-        {isPending ? (
-          <Skeleton height={48} />
-        ) : entries.length === 0 ? (
-          <Text size="sm">No tasks here.</Text>
-        ) : (
-          <Stack gap={2}>
-            {entries.map((entry) => (
-              <button
-                key={`${entry.impact}:${entry.effort}`}
-                type="button"
-                className="atlas-record-card"
-                onClick={() => onOpen(entry.impact, entry.effort)}
-              >
-                <Inline gap={2} align="center" justify="between">
-                  <Text weight="bold">
-                    Impact {entry.impact} / Effort {entry.effort}
-                  </Text>
-                  <Inline gap={2} align="center">
-                    <Text size="sm">
-                      {entry.tasks.length} {entry.tasks.length === 1 ? 'task' : 'tasks'}
-                    </Text>
-                    <Badge variant="solid">{entry.tasks[0]?.score}</Badge>
-                  </Inline>
-                </Inline>
-              </button>
-            ))}
-          </Stack>
-        )}
-      </CardBody>
-    </Card>
   );
 }

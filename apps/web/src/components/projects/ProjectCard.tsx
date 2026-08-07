@@ -15,6 +15,7 @@ import { canManageProject } from '../../lib/organization.ts';
 import { ProjectIcon } from '../../lib/projectIcons.tsx';
 import { useSession } from '../../lib/session.ts';
 import { ProjectRowActions } from './ProjectRowActions.tsx';
+import { ICON_SIZES } from '../../lib/icons.ts';
 
 interface ProjectCardProps {
   project: ProjectDto;
@@ -34,7 +35,7 @@ export function ProjectCard({ project, isAdmin, onEdit }: ProjectCardProps) {
         <Stack gap={3}>
           <Stack gap={2}>
             <Inline gap={2} align="center" justify="between" wrap={false}>
-              <ProjectIcon icon={project.icon} size={22} />
+              <ProjectIcon icon={project.icon} size={ICON_SIZES.xxl} />
 
               <Inline gap={2} align="center" wrap={false}>
                 {project.archivedAt ? <Badge variant="outline">Archived</Badge> : null}

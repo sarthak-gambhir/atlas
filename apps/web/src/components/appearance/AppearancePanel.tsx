@@ -16,8 +16,9 @@ import {
   useTheme,
   Box,
   FormField,
+  Icon,
 } from '@astrabound/duality';
-import { RiCheckLine } from 'react-icons/ri';
+import { ACTION_ICONS, ICON_SIZES } from '../../lib/icons.ts';
 
 export function AppearancePanel() {
   const { theme, density, texture, setTheme, setDensity, setTexture } = useTheme();
@@ -59,7 +60,7 @@ export function AppearancePanel() {
                 </span>
                 <span className="atlas-swatch-label">
                   {palette.label}
-                  {active ? <RiCheckLine aria-hidden /> : null}
+                  {active ? <Icon size={ICON_SIZES.md} icon={ACTION_ICONS.confirm} /> : null}
                 </span>
               </button>
             );
@@ -134,10 +135,16 @@ export function AppearancePanel() {
               </Stack>
 
               <Inline gap={2} align="center">
-                <Button variant="solid">Solid</Button>
-                <Button variant="inverse">Inverse</Button>
-                <Button variant="ghost">Ghost</Button>
-                <Button variant="solid" disabled>
+                <Button className="atlas-button" variant="solid">
+                  Solid
+                </Button>
+                <Button className="atlas-button" variant="inverse">
+                  Inverse
+                </Button>
+                <Button className="atlas-button" variant="ghost">
+                  Ghost
+                </Button>
+                <Button className="atlas-button" variant="solid" disabled>
                   Disabled
                 </Button>
               </Inline>

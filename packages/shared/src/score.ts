@@ -56,7 +56,7 @@ export interface ScoreInputs {
   dueEndDate: string | null;
   /** Pins urgency to an explicit level, bypassing the dates. */
   urgencyOverride: number | null;
-  /** When the task was completed; freezes closed-task urgency. */
+  /** When the task was completed; freezes closed-task urgency. Date-only or full ISO (date portion used). */
   completedAt: string | null;
 }
 
@@ -141,10 +141,11 @@ export function computeScore(
   const closed = (CLOSED_STATUSES as readonly string[]).includes(task.status);
   // A closed task freezes its urgency at completion so a passing deadline can no
   // longer inflate it; an archived task that was never completed drops to the
-  // floor. Open tasks measure against today.
-  const reference = closed ? task.completedAt : today;
+  // floor. Open tasks measure against today. DTOs may pass a full ISO timestamp.
+  const completedDay = task.completedAt?.slice(0, 10) ?? null;
+  const reference = closed ? completedDay : today;
   const relevantDate =
-    closed && task.completedAt == null
+    closed && completedDay == null
       ? null
       : relevantDue(task.status, task.dueStartDate, task.dueEndDate).date;
   const urgency = urgencyFor(relevantDate, task.urgencyOverride, reference ?? today);

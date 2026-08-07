@@ -3,6 +3,7 @@ import {
   Button,
   DataTable,
   Heading,
+  Icon,
   Inline,
   Menu,
   MenuItem,
@@ -18,8 +19,10 @@ import type { ReactNode } from 'react';
 import type { TaskDto, TaskStatus } from '@atlas/shared';
 
 import { dueLabel } from '../../lib/dates.ts';
+import { ACTION_ICONS, STATUS_ICONS } from '../../lib/icons.ts';
 import { BOARD_STATUSES, STATUS_LABELS } from '../../lib/labels.ts';
 import { useIsMobile } from '../../lib/useIsMobile.ts';
+import { IconLabel } from '../IconLabel.tsx';
 import { ScoreCell } from '../ScoreCell.tsx';
 import { TaskMiniList } from '../TaskMiniList.tsx';
 
@@ -49,14 +52,14 @@ export function BoardBucketModal({
         className="atlas-modal-menu"
         placement="bottom-end"
         trigger={
-          <Button size="sm" variant="inverse">
-            Move
+          <Button className="atlas-button" size="md" variant="inverse">
+            <IconLabel icon={ACTION_ICONS.move}>Move</IconLabel>
           </Button>
         }
       >
         {BOARD_STATUSES.filter((option) => option !== status).map((option) => (
           <MenuItem key={option} onSelect={() => onMove(task, option)}>
-            {STATUS_LABELS[option]}
+            <IconLabel icon={STATUS_ICONS[option]}>{STATUS_LABELS[option]}</IconLabel>
           </MenuItem>
         ))}
       </Menu>
@@ -126,6 +129,7 @@ export function BoardBucketModal({
     >
       <ModalHeader>
         <Inline gap={2} align="center" justify="start">
+          <Icon icon={STATUS_ICONS[status]} size="md" />
           <Heading level={2} visualLevel={4}>
             {STATUS_LABELS[status]}
           </Heading>

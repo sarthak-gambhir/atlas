@@ -1,3 +1,4 @@
+import { Icon, type IconProps } from '@astrabound/duality';
 import { PROJECT_ICON_KEYS, type ProjectIconKey } from '@atlas/shared';
 import type { IconType } from 'react-icons';
 import {
@@ -46,16 +47,13 @@ export function toProjectIconKey(value: string | null | undefined): ProjectIconK
   return value != null && value in PROJECT_ICONS ? (value as ProjectIconKey) : DEFAULT_PROJECT_ICON;
 }
 
-interface ProjectIconProps {
+interface ProjectIconProps extends Omit<IconProps, 'icon'> {
   icon: string | null | undefined;
-  size?: number;
-  'aria-hidden'?: boolean;
 }
 
 /** Renders a project's icon (or the folder fallback) as a Remix glyph. */
-export function ProjectIcon({ icon, size = 20, 'aria-hidden': ariaHidden = true }: ProjectIconProps) {
-  const Glyph = PROJECT_ICONS[toProjectIconKey(icon)];
-  return <Glyph size={size} aria-hidden={ariaHidden} />;
+export function ProjectIcon({ icon, size = 'md', ...rest }: ProjectIconProps) {
+  return <Icon icon={PROJECT_ICONS[toProjectIconKey(icon)]} size={size} {...rest} />;
 }
 
 export { PROJECT_ICON_KEYS };

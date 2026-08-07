@@ -7,6 +7,7 @@ import {
   DrawerBody,
   DrawerHeader,
   Heading,
+  Icon,
   Inline,
   Kbd,
   Popover,
@@ -20,10 +21,11 @@ import {
   Text,
 } from '@astrabound/duality';
 import { useCallback, useEffect, useState } from 'react';
-import { RiMenuLine, RiSearchLine } from 'react-icons/ri';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 
+import { ACTION_ICONS } from '../lib/icons.ts';
 import { NAV_ITEMS, activeNavPath } from '../lib/nav.ts';
+import { IconLabel } from './IconLabel.tsx';
 import { QuickAddContext } from '../lib/quick-add.ts';
 import { useLogout, useSession } from '../lib/session.ts';
 import { useIsMobile } from '../lib/useIsMobile.ts';
@@ -131,26 +133,26 @@ export function AppShell() {
         <Divider />
         <Stack gap={1}>
           <Button
-            className="atlas-account-item"
+            className="atlas-button atlas-account-item"
             variant="ghost"
-            size="sm"
+            size="md"
             onClick={() => {
               setAccountOpen(false);
               void navigate('/settings');
             }}
           >
-            Settings
+            <IconLabel icon={ACTION_ICONS.settings}>Settings</IconLabel>
           </Button>
           <Button
-            className="atlas-account-item"
+            className="atlas-button atlas-account-item"
             variant="ghost"
-            size="sm"
+            size="md"
             onClick={() => {
               setAccountOpen(false);
               logout.mutate();
             }}
           >
-            Sign out
+            <IconLabel icon={ACTION_ICONS.signOut}>Sign out</IconLabel>
           </Button>
         </Stack>
       </Stack>
@@ -159,7 +161,7 @@ export function AppShell() {
 
   const searchButton = isMobile ? (
     <Button variant="ghost" size="sm" aria-label="Search" onClick={() => setPaletteOpen(true)}>
-      <RiSearchLine aria-hidden />
+      <Icon icon={ACTION_ICONS.search} />
     </Button>
   ) : (
     <Button variant="ghost" size="sm" onClick={() => setPaletteOpen(true)}>
@@ -204,7 +206,11 @@ export function AppShell() {
             />
           </SidebarBody>
           <SidebarFooter>
-            <Inline justify={navCollapsed ? 'center' : 'end'} wrap={false} style={{ width: '100%' }}>
+            <Inline
+              justify={navCollapsed ? 'center' : 'end'}
+              wrap={false}
+              style={{ width: '100%' }}
+            >
               <SidebarTrigger />
             </Inline>
           </SidebarFooter>
@@ -228,7 +234,7 @@ export function AppShell() {
                   aria-label="Open navigation"
                   onClick={() => setNavOpen(true)}
                 >
-                  <RiMenuLine aria-hidden />
+                  <Icon icon={ACTION_ICONS.menu} />
                 </Button>
                 <BrandMark size={22} />
                 <Heading level={2} visualLevel={5}>
@@ -288,10 +294,17 @@ export function AppShell() {
       ) : null}
 
       {quickAddOpen ? (
-        <QuickAddModal initialProjectId={quickAddProjectId} onClose={() => setQuickAddOpen(false)} />
+        <QuickAddModal
+          initialProjectId={quickAddProjectId}
+          onClose={() => setQuickAddOpen(false)}
+        />
       ) : null}
 
-      <CommandBar isOpen={paletteOpen} onClose={() => setPaletteOpen(false)} onQuickAdd={openQuickAdd} />
+      <CommandBar
+        isOpen={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        onQuickAdd={openQuickAdd}
+      />
     </Inline>
   );
 }

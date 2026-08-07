@@ -4,6 +4,7 @@ import {
   Button,
   EmptyState,
   Heading,
+  Icon,
   Inline,
   Stack,
   Stat,
@@ -15,13 +16,14 @@ import {
   Text,
 } from '@astrabound/duality';
 import { useState } from 'react';
-import { RiArrowLeftLine } from 'react-icons/ri';
 import { Link, useNavigate, useParams } from 'react-router';
 
+import { IconLabel } from '../components/IconLabel.tsx';
 import { TaskTable } from '../components/TaskTable.tsx';
 import { ProjectFormModal } from '../components/projects/ProjectFormModal.tsx';
 import { ProjectMembers } from '../components/projects/ProjectMembers.tsx';
 import { ProjectRowActions } from '../components/projects/ProjectRowActions.tsx';
+import { ACTION_ICONS } from '../lib/icons.ts';
 import { canEditProject, canManageProject, useProject, useProjects } from '../lib/organization.ts';
 import { ProjectIcon } from '../lib/projectIcons.tsx';
 import { useQuickAdd } from '../lib/quick-add.ts';
@@ -41,7 +43,7 @@ export function ProjectDetailPage() {
   const backLink = (
     <Link to="/projects" className="atlas-card-link">
       <Inline gap={1} align="center">
-        <RiArrowLeftLine aria-hidden />
+        <Icon icon={ACTION_ICONS.back} />
         <Text size="sm">Projects</Text>
       </Inline>
     </Link>
@@ -64,11 +66,14 @@ export function ProjectDetailPage() {
           <Text>Loading project...</Text>
         ) : (
           <EmptyState
+            icon={<Icon icon={ACTION_ICONS.warning} size="lg" />}
             title="Project not found"
             description="It may have been deleted."
             action={
               <Link to="/projects" className="atlas-card-link">
-                <Button variant="solid">Back to projects</Button>
+                <Button variant="solid">
+                  <IconLabel icon={ACTION_ICONS.back}>Back to projects</IconLabel>
+                </Button>
               </Link>
             }
           />
@@ -94,8 +99,13 @@ export function ProjectDetailPage() {
         <Inline gap={2} align="center">
           {archived ? <Badge variant="outline">Archived</Badge> : null}
           {readOnly ? null : (
-            <Button variant="solid" onClick={() => openQuickAdd(project.id)}>
-              New task
+            <Button
+              className="atlas-button"
+              size="md"
+              variant="solid"
+              onClick={() => openQuickAdd(project.id)}
+            >
+              <IconLabel icon={ACTION_ICONS.create}>New task</IconLabel>
             </Button>
           )}
           <ProjectRowActions
@@ -109,7 +119,7 @@ export function ProjectDetailPage() {
       </Inline>
 
       <Inline gap={3} align="center" justify="start" wrap>
-        <ProjectIcon icon={project.icon} size={28} />
+        <ProjectIcon icon={project.icon} size="lg" />
         <Heading level={1} visualLevel={3}>
           {project.name}
         </Heading>
@@ -145,6 +155,7 @@ export function ProjectDetailPage() {
             readOnly={readOnly}
             emptyState={
               <EmptyState
+                icon={<Icon icon={ACTION_ICONS.task} size="lg" />}
                 title="No tasks yet"
                 description={
                   readOnly ? 'This project has no tasks.' : 'Add the first task to this project.'
@@ -152,7 +163,7 @@ export function ProjectDetailPage() {
                 action={
                   readOnly ? null : (
                     <Button variant="solid" onClick={() => openQuickAdd(project.id)}>
-                      New task
+                      <IconLabel icon={ACTION_ICONS.create}>New task</IconLabel>
                     </Button>
                   )
                 }

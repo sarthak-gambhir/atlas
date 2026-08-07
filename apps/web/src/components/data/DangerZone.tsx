@@ -16,6 +16,8 @@ import {
 import { useState } from 'react';
 
 import { useImportBackup } from '../../lib/admin.ts';
+import { ACTION_ICONS } from '../../lib/icons.ts';
+import { IconLabel } from '../IconLabel.tsx';
 
 const CONFIRM_WORD = 'reset';
 
@@ -58,8 +60,13 @@ export function DangerZone() {
       </Stack>
 
       <Inline>
-        <Button variant="inverse" onClick={() => setIsOpen(true)}>
-          Reset all data
+        <Button
+          className="atlas-button"
+          variant="inverse"
+          size="md"
+          onClick={() => setIsOpen(true)}
+        >
+          <IconLabel icon={ACTION_ICONS.delete}>Reset all data</IconLabel>
         </Button>
       </Inline>
 
@@ -87,16 +94,26 @@ export function DangerZone() {
         </ModalBody>
         <ModalFooter>
           <Inline gap={2} justify="end">
-            <Button type="button" variant="ghost" onClick={close}>
+            <Button
+              className="atlas-button"
+              type="button"
+              variant="ghost"
+              size="md"
+              onClick={close}
+            >
               Cancel
             </Button>
             <Button
+              className="atlas-button"
               type="button"
               variant="solid"
+              size="md"
               disabled={reset.isPending || confirmText.trim().toLowerCase() !== CONFIRM_WORD}
               onClick={run}
             >
-              {reset.isPending ? 'Resetting...' : 'Reset all data'}
+              <IconLabel icon={ACTION_ICONS.delete}>
+                {reset.isPending ? 'Resetting...' : 'Reset all data'}
+              </IconLabel>
             </Button>
           </Inline>
         </ModalFooter>

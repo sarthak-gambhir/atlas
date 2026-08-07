@@ -5,6 +5,7 @@ import {
   Checkbox,
   ConfirmDialog,
   DataTable,
+  Icon,
   Inline,
   Menu,
   MenuItem,
@@ -16,8 +17,8 @@ import {
 } from '@astrabound/duality';
 import type { ProjectDto, ProjectMemberRole, UserSummaryDto } from '@atlas/shared';
 import { useMemo, useState, type ReactNode } from 'react';
-import { RiMore2Fill } from 'react-icons/ri';
 
+import { ACTION_ICONS } from '../../lib/icons.ts';
 import {
   projectRoleFor,
   useAddProjectMember,
@@ -28,6 +29,7 @@ import {
 } from '../../lib/organization.ts';
 import { useSession } from '../../lib/session.ts';
 import { useIsMobile } from '../../lib/useIsMobile.ts';
+import { IconLabel } from '../IconLabel.tsx';
 
 const ROLE_LABELS: Record<'owner' | ProjectMemberRole, string> = {
   owner: 'Owner',
@@ -165,21 +167,29 @@ export function ProjectMembers({ project, canManage }: ProjectMembersProps) {
         trigger={
           <Button
             variant="inverse"
-            size="sm"
+            size="md"
             aria-label={`Actions for ${member.displayName}`}
-            className="atlas-action-menu-button"
+            className="atlas-button atlas-icon-button atlas-action-menu-button"
           >
-            <RiMore2Fill aria-hidden />
+            <Icon icon={ACTION_ICONS.more} />
           </Button>
         }
       >
         {role === 'viewer' ? (
-          <MenuItem onSelect={() => changeRole(member, 'editor')}>Make editor</MenuItem>
+          <MenuItem onSelect={() => changeRole(member, 'editor')}>
+            <IconLabel icon={ACTION_ICONS.role}>Make editor</IconLabel>
+          </MenuItem>
         ) : (
-          <MenuItem onSelect={() => changeRole(member, 'viewer')}>Make viewer</MenuItem>
+          <MenuItem onSelect={() => changeRole(member, 'viewer')}>
+            <IconLabel icon={ACTION_ICONS.role}>Make viewer</IconLabel>
+          </MenuItem>
         )}
-        <MenuItem onSelect={() => setTransferring(member)}>Make owner</MenuItem>
-        <MenuItem onSelect={() => setRemoving(member)}>Remove</MenuItem>
+        <MenuItem onSelect={() => setTransferring(member)}>
+          <IconLabel icon={ACTION_ICONS.makeOwner}>Make owner</IconLabel>
+        </MenuItem>
+        <MenuItem onSelect={() => setRemoving(member)}>
+          <IconLabel icon={ACTION_ICONS.delete}>Remove</IconLabel>
+        </MenuItem>
       </Menu>
     );
   };
@@ -223,7 +233,7 @@ export function ProjectMembers({ project, canManage }: ProjectMembersProps) {
         cell: (member) => {
           const role = projectRoleFor(project, member.id) ?? 'editor';
           return (
-            <Badge variant={role === 'owner' ? 'solid' : 'outline'} size="sm">
+            <Badge variant={role === 'owner' ? 'solid' : 'outline'} size="md">
               {ROLE_LABELS[role]}
             </Badge>
           );
@@ -271,7 +281,7 @@ export function ProjectMembers({ project, canManage }: ProjectMembersProps) {
         <Inline gap={2} align="center" justify="between">
           <Badge variant="solid">{removableSelected.length} selected</Badge>
           <Button variant="inverse" onClick={() => setBulkRemoving(true)}>
-            Remove selected
+            <IconLabel icon={ACTION_ICONS.delete}>Remove selected</IconLabel>
           </Button>
         </Inline>
       ) : null}
@@ -344,6 +354,7 @@ export function ProjectMembers({ project, canManage }: ProjectMembersProps) {
           selectable={canManage}
           selectedIds={canManage ? selectedIds : undefined}
           onSelectionChange={canManage ? (ids) => setSelectedIds(ids.map(String)) : undefined}
+          stickyHeader
           pageSize={10}
         />
       )}

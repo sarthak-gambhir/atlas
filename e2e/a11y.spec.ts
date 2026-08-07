@@ -1,10 +1,15 @@
 import { AxeBuilder } from '@axe-core/playwright';
 import { test, expect, type Page } from '@playwright/test';
 
-/** A seeded string per route, so the scan runs against loaded content. */
+/**
+ * A string per route that only appears once the route's data has loaded, so the
+ * scan runs against real content. The board groups tasks into summary columns
+ * rather than listing them, so its column headings stand in for a task title —
+ * they replace skeletons only after the query settles.
+ */
 const routes = [
   { path: '/', name: 'backlog', ready: 'Fix checkout crash on Safari' },
-  { path: '/board', name: 'board', ready: 'Fix checkout crash on Safari' },
+  { path: '/board', name: 'board', ready: 'In progress' },
   { path: '/matrix', name: 'matrix', ready: 'Impact / Effort' },
   { path: '/projects', name: 'projects', ready: 'Website relaunch' },
   { path: '/settings', name: 'settings', ready: 'Bucket thresholds' },
@@ -59,9 +64,12 @@ test('keyboard: quick-add modal opens on n and closes on escape', async ({ page 
   await expect(heading).toBeHidden();
 });
 
-test('keyboard: task drawer closes on escape', async ({ page }) => {
+test('keyboard: task edit modal closes on escape', async ({ page }) => {
   await page.goto('/');
+  // A backlog row opens the task's own page; editing happens in a modal there.
   await page.getByText('Fix checkout crash on Safari').first().click();
+  await page.getByRole('button', { name: 'Edit' }).click();
+
   const heading = page.getByRole('heading', { name: 'Task', exact: true });
   await expect(heading).toBeVisible();
   await page.keyboard.press('Escape');
@@ -70,6 +78,6 @@ test('keyboard: task drawer closes on escape', async ({ page }) => {
 
 test('account menu opens from the header', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: /Ada Admin/ }).click();
-  await expect(page.getByRole('menuitem', { name: 'Sign out' })).toBeVisible();
+  await page.getByRole('button', { name: 'Account menu' }).click();
+  await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
 });

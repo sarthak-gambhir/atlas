@@ -1,3 +1,5 @@
+import { Icon } from '@astrabound/duality';
+
 import { PROJECT_ICON_KEYS, PROJECT_ICONS, type ProjectIconKey } from '../../lib/projectIcons.tsx';
 
 interface IconPickerProps {
@@ -10,7 +12,6 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
   return (
     <div className="atlas-icon-grid" role="radiogroup" aria-label="Project icon">
       {PROJECT_ICON_KEYS.map((key) => {
-        const Glyph = PROJECT_ICONS[key];
         const selected = key === value;
         return (
           <button
@@ -24,7 +25,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
             title={key}
             onClick={() => onChange(key)}
           >
-            <Glyph size={20} aria-hidden />
+            <Icon icon={PROJECT_ICONS[key]} size="md" />
           </button>
         );
       })}

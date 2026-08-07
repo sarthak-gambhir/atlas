@@ -14,7 +14,9 @@ import {
 import { useState, type FormEvent } from 'react';
 
 import { useChangePassword } from '../../lib/admin.ts';
+import { ACTION_ICONS } from '../../lib/icons.ts';
 import { useSession, useSignOutOtherDevices } from '../../lib/session.ts';
+import { IconLabel } from '../IconLabel.tsx';
 import { EditProfileModal } from './EditProfileModal.tsx';
 
 export function AccountPanel() {
@@ -63,8 +65,8 @@ function IdentitySection() {
           </Stack>
         </Inline>
 
-        <Button variant="inverse" size="sm" onClick={openEditor}>
-          Edit profile
+        <Button className="atlas-button" variant="inverse" size="md" onClick={openEditor}>
+          <IconLabel icon={ACTION_ICONS.edit}>Edit profile</IconLabel>
         </Button>
       </Inline>
 
@@ -150,6 +152,7 @@ function ChangePasswordSection() {
 
           <Inline justify="end">
             <Button
+              className="atlas-button"
               type="submit"
               variant="solid"
               disabled={
@@ -159,6 +162,7 @@ function ChangePasswordSection() {
                 newPassword.length < 8 ||
                 confirmation === ''
               }
+              size="md"
             >
               {change.isPending ? 'Changing...' : 'Change password'}
             </Button>
@@ -177,7 +181,11 @@ function SessionsSection() {
     signOutOthers.mutate(undefined, {
       onSuccess: () => toast({ title: 'Other devices signed out' }),
       onError: (cause) =>
-        toast({ title: 'Could not sign out other devices', description: cause.message, tone: 'error' }),
+        toast({
+          title: 'Could not sign out other devices',
+          description: cause.message,
+          tone: 'error',
+        }),
     });
   };
 
@@ -194,8 +202,16 @@ function SessionsSection() {
       </Stack>
 
       <Inline>
-        <Button variant="inverse" disabled={signOutOthers.isPending} onClick={run}>
-          {signOutOthers.isPending ? 'Signing out...' : 'Sign out other devices'}
+        <Button
+          className="atlas-button"
+          variant="inverse"
+          disabled={signOutOthers.isPending}
+          onClick={run}
+          size="md"
+        >
+          <IconLabel icon={ACTION_ICONS.signOut}>
+            {signOutOthers.isPending ? 'Signing out...' : 'Sign out other devices'}
+          </IconLabel>
         </Button>
       </Inline>
     </Stack>

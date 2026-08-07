@@ -1,27 +1,35 @@
 import {
+  Avatar,
   Badge,
   Button,
-  Divider,
+  Card,
+  CardBody,
+  CardHeader,
   EmptyState,
   Heading,
   Icon,
   Inline,
   Stack,
+  Stat,
+  StatGroup,
   Text,
 } from '@astrabound/duality';
+import { CLOSED_STATUSES, relevantDue, urgencyFor } from '@atlas/shared';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 
+import { BackLink } from '../components/BackLink.tsx';
 import { BucketBadge } from '../components/BucketBadge.tsx';
 import { IconLabel } from '../components/IconLabel.tsx';
 import { StatusBadge } from '../components/StatusBadge.tsx';
 import { TagBadge } from '../components/TagBadge.tsx';
 import { TaskModal } from '../components/TaskModal.tsx';
-import { dueLabel } from '../lib/dates.ts';
+import { dueLabel, todayIso } from '../lib/dates.ts';
 import { ACTION_ICONS } from '../lib/icons.ts';
 import { CONFIDENCE_LABELS } from '../lib/labels.ts';
 import { useProjects, useUsers } from '../lib/organization.ts';
+import { ProjectIcon } from '../lib/projectIcons.tsx';
 import { useTask } from '../lib/tasks.ts';
 
 export function TaskDetailPage() {
@@ -33,19 +41,12 @@ export function TaskDetailPage() {
   const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
 
-  const backLink = (
-    <Link to="/" className="atlas-card-link">
-      <Inline gap={1} align="center">
-        <Icon icon={ACTION_ICONS.back} />
-        <Text size="sm">Tasks</Text>
-      </Inline>
-    </Link>
-  );
+  const backFallback = { label: 'Tasks', to: '/' };
 
   if (!task) {
     return (
       <Stack gap={4}>
-        {backLink}
+        <BackLink fallback={backFallback} />
         {isPending && !error ? (
           <Text>Loading task...</Text>
         ) : (
@@ -53,13 +54,7 @@ export function TaskDetailPage() {
             icon={<Icon icon={ACTION_ICONS.warning} size={64} />}
             title="Task not found"
             description="It may have been deleted, or you don't have access to it."
-            action={
-              <Link to="/" className="atlas-card-link">
-                <Button className="atlas-button" size="md" variant="solid">
-                  <IconLabel icon={ACTION_ICONS.back}>Back to tasks</IconLabel>
-                </Button>
-              </Link>
-            }
+            action={<BackLink fallback={backFallback} variant="button" />}
           />
         )}
       </Stack>
@@ -70,59 +65,74 @@ export function TaskDetailPage() {
   const assignee = task.assigneeId ? users?.find((u) => u.id === task.assigneeId) : undefined;
   const dates = dueLabel(task);
 
+  // Mirror computeScore: closed tasks freeze urgency at their completion date, so
+  // the stat matches the urgency that produced the (possibly frozen) score.
+  const closed = (CLOSED_STATUSES as readonly string[]).includes(task.status);
+  const completedDay = task.completedAt ? task.completedAt.slice(0, 10) : null;
+  const urgency = urgencyFor(
+    closed && completedDay == null
+      ? null
+      : relevantDue(task.status, task.dueStartDate, task.dueEndDate).date,
+    task.urgencyOverride,
+    (closed ? completedDay : todayIso()) ?? todayIso(),
+  );
+
   return (
     <Stack gap={4}>
       <Inline gap={3} align="center" justify="between" wrap>
-        {backLink}
-        <Button variant="solid" onClick={() => setEditing(true)}>
+        <BackLink fallback={backFallback} />
+        <Button className="atlas-button" size="md" variant="solid" onClick={() => setEditing(true)}>
           <IconLabel icon={ACTION_ICONS.edit}>Edit</IconLabel>
         </Button>
       </Inline>
 
       <Stack gap={2}>
-        <Inline gap={2} align="center">
-          <Icon icon={ACTION_ICONS.task} size="lg" />
-          <Heading level={1} visualLevel={3}>
-            {task.title}
-          </Heading>
-        </Inline>
-        <Inline gap={2} align="center">
-          <Badge variant="solid">{task.score}</Badge>
+        <Heading level={1} visualLevel={3}>
+          {task.title}
+        </Heading>
+        <Inline gap={2} align="center" wrap>
           <BucketBadge bucket={task.bucket} />
           <StatusBadge status={task.status} />
         </Inline>
       </Stack>
 
-      <Divider />
+      <StatGroup>
+        <Stat label="Score" value={task.score} />
+        <Stat label="Impact" value={task.impact} />
+        <Stat label="Urgency" value={urgency} />
+        <Stat label="Effort" value={task.effort} />
+        <Stat
+          label="Confidence"
+          value={CONFIDENCE_LABELS[String(task.confidence)] ?? String(task.confidence)}
+        />
+      </StatGroup>
 
-      <Stack gap={3}>
-        <Field label="Project">
+      <dl className="atlas-detail-facts">
+        <Fact label="Project">
           {project ? (
             <Link to={`/projects/${project.id}`} className="atlas-card-link">
-              <Text>{project.name}</Text>
+              <Inline gap={2} align="center">
+                <ProjectIcon icon={project.icon} size="sm" />
+                <Text>{project.name}</Text>
+              </Inline>
             </Link>
           ) : (
             <Text>No project</Text>
           )}
-        </Field>
+        </Fact>
 
-        <Field label="Assignee">
-          <Text>{assignee ? assignee.displayName : 'Unassigned'}</Text>
-        </Field>
+        <Fact label="Assignee">
+          {assignee ? (
+            <Inline gap={2} align="center">
+              <Avatar name={assignee.displayName} size="sm" />
+              <Text>{assignee.displayName}</Text>
+            </Inline>
+          ) : (
+            <Text>Unassigned</Text>
+          )}
+        </Fact>
 
-        <Field label="Impact">
-          <Text>{task.impact}</Text>
-        </Field>
-
-        <Field label="Effort">
-          <Text>{task.effort}</Text>
-        </Field>
-
-        <Field label="Confidence">
-          <Text>{CONFIDENCE_LABELS[String(task.confidence)] ?? String(task.confidence)}</Text>
-        </Field>
-
-        <Field label="Dates">
+        <Fact label="Dates">
           {task.dueStartDate || task.dueEndDate ? (
             <Stack gap={1}>
               <Text>Start: {task.dueStartDate ?? '—'}</Text>
@@ -141,9 +151,9 @@ export function TaskDetailPage() {
           ) : (
             <Text>No dates</Text>
           )}
-        </Field>
+        </Fact>
 
-        <Field label="Tags">
+        <Fact label="Tags">
           {task.tags.length > 0 ? (
             <Inline gap={1} wrap>
               {task.tags.map((tag) => (
@@ -153,23 +163,30 @@ export function TaskDetailPage() {
           ) : (
             <Text>None</Text>
           )}
-        </Field>
+        </Fact>
 
-        <Field label="Notes">
+        <Fact label="Created">
+          <Text>
+            {new Date(task.createdAt).toLocaleDateString()}
+            {task.completedAt
+              ? `, completed ${new Date(task.completedAt).toLocaleDateString()}`
+              : ''}
+          </Text>
+        </Fact>
+      </dl>
+
+      <Card>
+        <CardHeader>
+          <Text weight="bold">Notes</Text>
+        </CardHeader>
+        <CardBody>
           {task.notes ? (
             <Text style={{ whiteSpace: 'pre-wrap' }}>{task.notes}</Text>
           ) : (
-            <Text>No notes</Text>
+            <Text size="sm">No notes yet.</Text>
           )}
-        </Field>
-      </Stack>
-
-      <Divider />
-
-      <Text size="sm">
-        Created {new Date(task.createdAt).toLocaleDateString()}
-        {task.completedAt ? `, completed ${new Date(task.completedAt).toLocaleDateString()}` : ''}
-      </Text>
+        </CardBody>
+      </Card>
 
       {editing ? (
         <TaskModal
@@ -183,18 +200,19 @@ export function TaskDetailPage() {
   );
 }
 
-interface FieldProps {
+interface FactProps {
   label: string;
   children: ReactNode;
 }
 
-function Field({ label, children }: FieldProps) {
+/** One label/value row of the facts sidebar; the parent `dl` grid aligns them. */
+function Fact({ label, children }: FactProps) {
   return (
-    <Inline gap={3} align="start">
-      <Text size="sm" weight="bold" style={{ inlineSize: '8rem', flexShrink: 0 }}>
+    <>
+      <Text as="dt" size="sm" weight="bold">
         {label}
       </Text>
-      {children}
-    </Inline>
+      <dd style={{ margin: 0 }}>{children}</dd>
+    </>
   );
 }

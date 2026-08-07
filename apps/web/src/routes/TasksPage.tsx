@@ -65,6 +65,7 @@ export function TasksPage() {
         query={filters.query}
         ariaLabel="Ranked tasks"
         restrictProjectIds={restrictProjectIds}
+        backTarget={{ label: 'Tasks', to: '/' }}
         emptyState={
           <EmptyState
             icon={<Icon icon={isFiltered ? ACTION_ICONS.noResults : ACTION_ICONS.task} size="lg" />}

@@ -16,8 +16,9 @@ import {
   Text,
 } from '@astrabound/duality';
 import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { useNavigate, useParams } from 'react-router';
 
+import { BackLink } from '../components/BackLink.tsx';
 import { IconLabel } from '../components/IconLabel.tsx';
 import { TaskTable } from '../components/TaskTable.tsx';
 import { FavoriteButton } from '../components/projects/FavoriteButton.tsx';
@@ -41,19 +42,12 @@ export function ProjectDetailPage() {
   const openQuickAdd = useQuickAdd();
   const [editing, setEditing] = useState(false);
 
-  const backLink = (
-    <Link to="/projects" className="atlas-card-link">
-      <Inline gap={1} align="center">
-        <Icon icon={ACTION_ICONS.back} />
-        <Text size="sm">Projects</Text>
-      </Inline>
-    </Link>
-  );
+  const backFallback = { label: 'Projects', to: '/projects' };
 
   if (error) {
     return (
       <Stack gap={4}>
-        {backLink}
+        <BackLink fallback={backFallback} />
         <Alert tone="error">{error.message}</Alert>
       </Stack>
     );
@@ -62,7 +56,7 @@ export function ProjectDetailPage() {
   if (!project) {
     return (
       <Stack gap={4}>
-        {backLink}
+        <BackLink fallback={backFallback} />
         {isPending ? (
           <Text>Loading project...</Text>
         ) : (
@@ -70,13 +64,7 @@ export function ProjectDetailPage() {
             icon={<Icon icon={ACTION_ICONS.warning} size="lg" />}
             title="Project not found"
             description="It may have been deleted."
-            action={
-              <Link to="/projects" className="atlas-card-link">
-                <Button variant="solid">
-                  <IconLabel icon={ACTION_ICONS.back}>Back to projects</IconLabel>
-                </Button>
-              </Link>
-            }
+            action={<BackLink fallback={backFallback} variant="button" />}
           />
         )}
       </Stack>
@@ -95,7 +83,7 @@ export function ProjectDetailPage() {
   return (
     <Stack gap={4}>
       <Inline gap={3} align="center" justify="between" wrap>
-        {backLink}
+        <BackLink fallback={backFallback} />
 
         <Inline gap={2} align="center">
           {archived ? <Badge variant="outline">Archived</Badge> : null}
@@ -155,6 +143,7 @@ export function ProjectDetailPage() {
             query={{ projectId: project.id, includeClosed: true, includeArchived: true }}
             ariaLabel={`Tasks in ${project.name}`}
             readOnly={readOnly}
+            backTarget={{ label: project.name, to: `/projects/${project.id}` }}
             emptyState={
               <EmptyState
                 icon={<Icon icon={ACTION_ICONS.task} size="lg" />}

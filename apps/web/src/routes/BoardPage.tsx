@@ -7,6 +7,7 @@ import { BoardBucket } from '../components/board/BoardBucket.tsx';
 import { BoardBucketModal } from '../components/board/BoardBucketModal.tsx';
 import { TaskFilterToolbar } from '../components/FilterToolbar.tsx';
 import { PageHeader } from '../components/PageHeader.tsx';
+import { backState } from '../lib/backNav.ts';
 import { todayIso } from '../lib/dates.ts';
 import { useFilters } from '../lib/filters.ts';
 import { BOARD_STATUSES, STATUS_LABELS } from '../lib/labels.ts';
@@ -100,7 +101,9 @@ export function BoardPage() {
           status={openStatus}
           tasks={byStatus[openStatus]}
           onClose={() => setOpenStatus(null)}
-          onOpenTask={(id) => void navigate(`/tasks/${id}`)}
+          onOpenTask={(id) =>
+            void navigate(`/tasks/${id}`, { state: backState({ label: 'Board', to: '/board' }) })
+          }
           onMove={move}
         />
       ) : null}

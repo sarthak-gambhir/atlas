@@ -12,6 +12,7 @@ import type { ProjectDto } from '@atlas/shared';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 
+import { backState } from '../../lib/backNav.ts';
 import { canManageProject } from '../../lib/organization.ts';
 import { ProjectIcon } from '../../lib/projectIcons.tsx';
 import { useSession } from '../../lib/session.ts';
@@ -34,7 +35,9 @@ export function ProjectCard({ project, isAdmin, onEdit }: ProjectCardProps) {
   const [managingMembers, setManagingMembers] = useState(false);
   const { openTaskCount, doneTaskCount, totalTaskCount } = project;
   const percent = totalTaskCount > 0 ? Math.round((doneTaskCount / totalTaskCount) * 100) : 0;
-  const openProject = () => void navigate(`/projects/${project.id}`);
+  // Opening a project records Projects as the origin, so its "Back" link returns here.
+  const projectOrigin = backState({ label: 'Projects', to: '/projects' });
+  const openProject = () => void navigate(`/projects/${project.id}`, { state: projectOrigin });
 
   return (
     <Card
@@ -66,6 +69,7 @@ export function ProjectCard({ project, isAdmin, onEdit }: ProjectCardProps) {
             <Stack gap={1}>
               <Link
                 to={`/projects/${project.id}`}
+                state={projectOrigin}
                 className="atlas-card-link atlas-card-link-stretch"
               >
                 <TruncatedText lines={2} size="lg" weight="bold">

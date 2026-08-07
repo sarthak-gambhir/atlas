@@ -23,6 +23,7 @@ import { IconLabel } from './IconLabel.tsx';
 import { ScoreCell } from './ScoreCell.tsx';
 import { StatusBadge } from './StatusBadge.tsx';
 import { TagBadge } from './TagBadge.tsx';
+import { backState, type BackTarget } from '../lib/backNav.ts';
 import { dueLabel } from '../lib/dates.ts';
 import { ACTION_ICONS } from '../lib/icons.ts';
 import { useCompleteTask, useTasks, useUpdateTask } from '../lib/tasks.ts';
@@ -41,6 +42,11 @@ interface TaskTableProps {
    * "In favorite projects" quick filter.
    */
   restrictProjectIds?: string[];
+  /**
+   * Recorded as router state when opening a task, so the task page's "Back" link
+   * returns to the view that opened it (e.g. Tasks, or a specific project).
+   */
+  backTarget?: BackTarget;
 }
 
 /**
@@ -53,6 +59,7 @@ export function TaskTable({
   ariaLabel = 'Ranked tasks',
   readOnly = false,
   restrictProjectIds,
+  backTarget,
 }: TaskTableProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const navigate = useNavigate();
@@ -60,6 +67,14 @@ export function TaskTable({
   // Set during click capture when the click lands on a selection checkbox, so
   // the row's own click handler skips navigation for that one event.
   const skipRowClickRef = useRef(false);
+
+  // Opening a task records where we came from, so its "Back" link can return here.
+  const openTask = useCallback(
+    (id: string) => {
+      void navigate(`/tasks/${id}`, backTarget ? { state: backState(backTarget) } : undefined);
+    },
+    [navigate, backTarget],
+  );
 
   const { data: tasks, isPending, error } = useTasks(query);
   const complete = useCompleteTask();
@@ -288,7 +303,7 @@ export function TaskTable({
             setSelectedIds(checked ? (visibleTasks ?? []).map((task) => task.id) : [])
           }
           renderAction={renderRowAction}
-          onOpen={(id) => void navigate(`/tasks/${id}`)}
+          onOpen={openTask}
         />
       ) : (
         <div
@@ -316,7 +331,7 @@ export function TaskTable({
             stickyHeader
             onRowClick={(task) => {
               if (skipRowClickRef.current) return;
-              void navigate(`/tasks/${task.id}`);
+              openTask(task.id);
             }}
             selectable={!readOnly}
             selectedIds={activeSelection}

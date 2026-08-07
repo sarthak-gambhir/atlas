@@ -13,6 +13,7 @@ import {
 import { MatrixQuadrantModal } from '../components/matrix/MatrixQuadrantModal.tsx';
 import { statsForQuadrant } from '../components/matrix/quadrantStats.ts';
 import { PageHeader } from '../components/PageHeader.tsx';
+import { backState } from '../lib/backNav.ts';
 import { useFilters } from '../lib/filters.ts';
 import { PAGE_ICONS } from '../lib/nav.ts';
 import { useTasks } from '../lib/tasks.ts';
@@ -222,7 +223,9 @@ export function MatrixPage() {
           effort={openCell.effort}
           tasks={openTasks}
           onClose={() => setOpenCell(null)}
-          onOpenTask={(id) => void navigate(`/tasks/${id}`)}
+          onOpenTask={(id) =>
+            void navigate(`/tasks/${id}`, { state: backState({ label: 'Matrix', to: '/matrix' }) })
+          }
         />
       ) : null}
 
@@ -231,7 +234,9 @@ export function MatrixPage() {
           label={QUADRANT_META.find((meta) => meta.id === openQuadrant)!.label}
           tasks={quadrantTasks[openQuadrant]}
           onClose={() => setOpenQuadrant(null)}
-          onOpenTask={(id) => void navigate(`/tasks/${id}`)}
+          onOpenTask={(id) =>
+            void navigate(`/tasks/${id}`, { state: backState({ label: 'Matrix', to: '/matrix' }) })
+          }
         />
       ) : null}
     </Stack>

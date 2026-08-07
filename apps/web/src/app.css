@@ -578,6 +578,17 @@ a.atlas-record-card:focus-visible {
   align-items: center;
 }
 
+/* Task detail facts: label/value pairs in a two-column grid. Capped width so the
+ * values sit next to their labels instead of stranding across the full page. */
+.atlas-detail-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: var(--space-4);
+  row-gap: var(--space-3);
+  align-items: baseline;
+  max-inline-size: 32rem;
+}
+
 .atlas-button {
   padding: var(--space-2) var(--space-4);
 

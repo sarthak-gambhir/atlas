@@ -589,6 +589,53 @@ a.atlas-record-card:focus-visible {
   max-inline-size: 32rem;
 }
 
+/* Task detail stats (Score, Impact, Urgency, Effort, Confidence). Duality's
+ * StatGroup is a wrapping flex row, which breaks down once the page narrows: the
+ * long Confidence value ("Medium (80%)") holds a wide min-content floor and
+ * steals width from its neighbours, and the wrapped rows have no seam between
+ * them. Lay the five cells out as a grid instead, with the seams painted by the
+ * group's --fg backdrop showing through a hairline gap. */
+.atlas-task-stats.du_stat_group {
+  display: grid;
+  /* Four numeric cells split the row evenly; Confidence spells out a word and a
+   * percentage, so its track never dips below that text. */
+  grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(max-content, 2fr);
+  gap: var(--border-width);
+  background: var(--fg);
+  /* Trim the square cell corners back to the group's own rounding. */
+  overflow: hidden;
+}
+
+/* The gap owns the seams now, so drop the per-cell borders Duality draws. */
+.atlas-task-stats .du_stat,
+.atlas-task-stats .du_stat + .du_stat {
+  min-inline-size: 0;
+  border: 0;
+}
+
+@media (max-width: 1024px) {
+  .atlas-task-stats.du_stat_group {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  /* Five cells across three columns would leave a hole in the last row; let the
+   * final cell span the remainder, which also gives Confidence room for its
+   * label on one line. */
+  .atlas-task-stats .du_stat:last-child {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .atlas-task-stats.du_stat_group {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .atlas-task-stats .du_stat {
+    padding: var(--space-2) var(--space-3);
+  }
+}
+
 .atlas-button {
   padding: var(--space-2) var(--space-4);
 

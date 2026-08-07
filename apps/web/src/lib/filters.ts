@@ -1,5 +1,12 @@
-import type { PriorityBucket, TaskFilter, TaskStatus } from '@atlas/shared';
-import { useMemo, useState } from 'react';
+import {
+  PRIORITY_BUCKETS,
+  TASK_STATUSES,
+  type PriorityBucket,
+  type TaskFilter,
+  type TaskStatus,
+} from '@atlas/shared';
+import { useCallback, useMemo } from 'react';
+import { useSearchParams } from 'react-router';
 
 export interface FilterState {
   q: string;
@@ -25,9 +32,82 @@ const EMPTY: FilterState = {
   includeArchived: false,
 };
 
+/** Query-string keys `useFilters` owns; anything else on the URL is preserved. */
+const OWNED_KEYS = [
+  'q',
+  'statuses',
+  'buckets',
+  'projectId',
+  'assigneeId',
+  'tags',
+  'includeClosed',
+  'includeArchived',
+] as const;
+
 /** Order-independent equality for the array filters. */
 function sameSet(a: readonly string[], b: readonly string[]): boolean {
   return a.length === b.length && a.every((value) => b.includes(value));
+}
+
+// Rough UUID check so a hand-edited id can't reach the API and trip its uuid
+// schema (which would 400 the whole list). Facets already hide unknown options.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function uuidOr(value: string | null, fallback: string): string {
+  return value != null && UUID_RE.test(value) ? value : fallback;
+}
+
+/** Read a view's filter state from the URL, falling back to its baseline. */
+function decode(params: URLSearchParams, baseline: FilterState): FilterState {
+  const statuses = params.getAll('statuses').filter((v): v is TaskStatus =>
+    (TASK_STATUSES as readonly string[]).includes(v),
+  );
+  const buckets = params.getAll('buckets').filter((v): v is PriorityBucket =>
+    (PRIORITY_BUCKETS as readonly string[]).includes(v),
+  );
+  const tags = params.getAll('tags').filter((v) => v !== '');
+  return {
+    q: params.get('q') ?? baseline.q,
+    statuses: statuses.length ? statuses : baseline.statuses,
+    buckets: buckets.length ? buckets : baseline.buckets,
+    projectId: uuidOr(params.get('projectId'), baseline.projectId),
+    assigneeId: uuidOr(params.get('assigneeId'), baseline.assigneeId),
+    tags: tags.length ? tags : baseline.tags,
+    includeClosed: params.has('includeClosed')
+      ? params.get('includeClosed') === 'true'
+      : baseline.includeClosed,
+    includeArchived: params.has('includeArchived')
+      ? params.get('includeArchived') === 'true'
+      : baseline.includeArchived,
+  };
+}
+
+/** Serialize only the fields that differ from the baseline, so URLs stay minimal. */
+function writeOwned(params: URLSearchParams, next: FilterState, baseline: FilterState): void {
+  for (const key of OWNED_KEYS) params.delete(key);
+
+  if (next.q.trim() !== baseline.q && next.q.trim()) params.set('q', next.q);
+  if (!sameSet(next.statuses, baseline.statuses)) {
+    for (const status of next.statuses) params.append('statuses', status);
+  }
+  if (!sameSet(next.buckets, baseline.buckets)) {
+    for (const bucket of next.buckets) params.append('buckets', bucket);
+  }
+  if (next.projectId !== baseline.projectId && next.projectId) {
+    params.set('projectId', next.projectId);
+  }
+  if (next.assigneeId !== baseline.assigneeId && next.assigneeId) {
+    params.set('assigneeId', next.assigneeId);
+  }
+  if (!sameSet(next.tags, baseline.tags)) {
+    for (const tag of next.tags) params.append('tags', tag);
+  }
+  if (next.includeClosed !== baseline.includeClosed) {
+    params.set('includeClosed', String(next.includeClosed));
+  }
+  if (next.includeArchived !== baseline.includeArchived) {
+    params.set('includeArchived', String(next.includeArchived));
+  }
 }
 
 export interface UseFilters {
@@ -54,9 +134,49 @@ function countActive(state: FilterState, baseline: FilterState): number {
   return count;
 }
 
+/**
+ * View filters backed by the route's query string, so they survive reload and
+ * navigation and are shareable. `initial` sets the page baseline (e.g. the board
+ * includes closed tasks); only deviations from it are written to the URL.
+ */
 export function useFilters(initial: Partial<FilterState> = {}): UseFilters {
-  const baseline: FilterState = { ...EMPTY, ...initial };
-  const [state, setState] = useState<FilterState>(baseline);
+  const [params, setParams] = useSearchParams();
+  // Callers pass a fresh `initial` object literal each render, so key the memo on
+  // its contents (not identity) to keep `baseline` — and everything derived from
+  // it — stable across renders.
+  const initialKey = JSON.stringify(initial);
+  const baseline = useMemo<FilterState>(
+    () => ({ ...EMPTY, ...initial }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [initialKey],
+  );
+
+  const state = useMemo(() => decode(params, baseline), [params, baseline]);
+
+  const set = useCallback(
+    (patch: Partial<FilterState>) => {
+      setParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          writeOwned(next, { ...decode(prev, baseline), ...patch }, baseline);
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [baseline, setParams],
+  );
+
+  const clear = useCallback(() => {
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        for (const key of OWNED_KEYS) next.delete(key);
+        return next;
+      },
+      { replace: true },
+    );
+  }, [setParams]);
 
   const query = useMemo<TaskFilter>(() => {
     const trimmed = state.q.trim();
@@ -74,24 +194,8 @@ export function useFilters(initial: Partial<FilterState> = {}): UseFilters {
 
   // "Filtered" means the user changed something away from the page's baseline
   // (e.g. the board starts with closed included), so Clear has something to do.
-  const isFiltered =
-    state.q.trim() !== baseline.q ||
-    !sameSet(state.statuses, baseline.statuses) ||
-    !sameSet(state.buckets, baseline.buckets) ||
-    state.projectId !== baseline.projectId ||
-    state.assigneeId !== baseline.assigneeId ||
-    !sameSet(state.tags, baseline.tags) ||
-    state.includeClosed !== baseline.includeClosed ||
-    state.includeArchived !== baseline.includeArchived;
-
+  const isFiltered = countActive(state, baseline) > 0;
   const activeCount = countActive(state, baseline);
 
-  return {
-    state,
-    set: (patch) => setState((previous) => ({ ...previous, ...patch })),
-    clear: () => setState(baseline),
-    query,
-    isFiltered,
-    activeCount,
-  };
+  return { state, set, clear, query, isFiltered, activeCount };
 }

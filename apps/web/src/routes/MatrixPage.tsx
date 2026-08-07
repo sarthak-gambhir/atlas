@@ -1,7 +1,7 @@
 import { Alert, Box, Grid, Skeleton, Stack, Stat, StatGroup, Text } from '@astrabound/duality';
 import type { TaskDto } from '@atlas/shared';
 import { useMemo, useState, type CSSProperties } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 
 import { TaskFilterToolbar } from '../components/FilterToolbar.tsx';
 import { MatrixCell } from '../components/matrix/MatrixCell.tsx';
@@ -64,6 +64,7 @@ export function MatrixPage() {
   const filters = useFilters({ includeClosed: true });
   const { data: tasks, isPending, error } = useTasks(filters.query);
   const navigate = useNavigate();
+  const location = useLocation();
   const isMobile = useIsMobile();
   const [openCell, setOpenCell] = useState<{ impact: number; effort: number } | null>(null);
   const [openQuadrant, setOpenQuadrant] = useState<QuadrantId | null>(null);
@@ -224,7 +225,9 @@ export function MatrixPage() {
           tasks={openTasks}
           onClose={() => setOpenCell(null)}
           onOpenTask={(id) =>
-            void navigate(`/tasks/${id}`, { state: backState({ label: 'Matrix', to: '/matrix' }) })
+            void navigate(`/tasks/${id}`, {
+              state: backState({ label: 'Matrix', to: location.pathname + location.search }),
+            })
           }
         />
       ) : null}
@@ -235,7 +238,9 @@ export function MatrixPage() {
           tasks={quadrantTasks[openQuadrant]}
           onClose={() => setOpenQuadrant(null)}
           onOpenTask={(id) =>
-            void navigate(`/tasks/${id}`, { state: backState({ label: 'Matrix', to: '/matrix' }) })
+            void navigate(`/tasks/${id}`, {
+              state: backState({ label: 'Matrix', to: location.pathname + location.search }),
+            })
           }
         />
       ) : null}

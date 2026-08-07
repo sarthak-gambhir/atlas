@@ -10,7 +10,7 @@ import {
 } from '@astrabound/duality';
 import type { ProjectDto } from '@atlas/shared';
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 
 import { backState } from '../../lib/backNav.ts';
 import { canManageProject } from '../../lib/organization.ts';
@@ -31,12 +31,13 @@ interface ProjectCardProps {
 export function ProjectCard({ project, isAdmin, onEdit }: ProjectCardProps) {
   const { data: session } = useSession();
   const navigate = useNavigate();
+  const location = useLocation();
   const canManage = canManageProject(project, session);
   const [managingMembers, setManagingMembers] = useState(false);
   const { openTaskCount, doneTaskCount, totalTaskCount } = project;
   const percent = totalTaskCount > 0 ? Math.round((doneTaskCount / totalTaskCount) * 100) : 0;
   // Opening a project records Projects as the origin, so its "Back" link returns here.
-  const projectOrigin = backState({ label: 'Projects', to: '/projects' });
+  const projectOrigin = backState({ label: 'Projects', to: location.pathname + location.search });
   const openProject = () => void navigate(`/projects/${project.id}`, { state: projectOrigin });
 
   return (

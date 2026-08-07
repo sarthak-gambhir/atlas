@@ -1,7 +1,7 @@
 import { Alert, Grid, Skeleton, Stack, Stat, StatGroup, Text, useToast } from '@astrabound/duality';
 import { CLOSED_STATUSES, type TaskDto, type TaskStatus } from '@atlas/shared';
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 
 import { BoardBucket } from '../components/board/BoardBucket.tsx';
 import { BoardBucketModal } from '../components/board/BoardBucketModal.tsx';
@@ -21,6 +21,7 @@ export function BoardPage() {
   const update = useUpdateTask();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const [openStatus, setOpenStatus] = useState<TaskStatus | null>(null);
 
   const move = (task: TaskDto, status: TaskStatus) => {
@@ -102,7 +103,9 @@ export function BoardPage() {
           tasks={byStatus[openStatus]}
           onClose={() => setOpenStatus(null)}
           onOpenTask={(id) =>
-            void navigate(`/tasks/${id}`, { state: backState({ label: 'Board', to: '/board' }) })
+            void navigate(`/tasks/${id}`, {
+              state: backState({ label: 'Board', to: location.pathname + location.search }),
+            })
           }
           onMove={move}
         />

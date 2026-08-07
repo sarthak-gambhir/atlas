@@ -1,5 +1,6 @@
 import { Button, EmptyState, Icon, Inline, Stack } from '@astrabound/duality';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import { useLocation } from 'react-router';
 
 import { TaskFilterToolbar } from '../components/FilterToolbar.tsx';
 import { IconLabel } from '../components/IconLabel.tsx';
@@ -11,16 +12,18 @@ import { PAGE_ICONS } from '../lib/nav.ts';
 import { useProjects } from '../lib/organization.ts';
 import { useQuickAdd } from '../lib/quick-add.ts';
 import { useTasks } from '../lib/tasks.ts';
+import { useBooleanParam } from '../lib/urlState.ts';
 
 export function TasksPage() {
   const filters = useFilters({ includeClosed: true });
   const openQuickAdd = useQuickAdd();
   const { data: projects } = useProjects();
   const { data: tasks } = useTasks(filters.query);
+  const { search } = useLocation();
 
   // The "In favorite projects" chip is a client-side project restriction, so it
   // and the header count both read from the same favorite set.
-  const [inFavorites, setInFavorites] = useState(false);
+  const [inFavorites, setInFavorites] = useBooleanParam('favorites');
   const favoriteProjectIds = useMemo(
     () => (projects ?? []).filter((project) => project.isFavorite).map((project) => project.id),
     [projects],
@@ -65,7 +68,7 @@ export function TasksPage() {
         query={filters.query}
         ariaLabel="Ranked tasks"
         restrictProjectIds={restrictProjectIds}
-        backTarget={{ label: 'Tasks', to: '/' }}
+        backTarget={{ label: 'Tasks', to: `/${search}` }}
         emptyState={
           <EmptyState
             icon={<Icon icon={isFiltered ? ACTION_ICONS.noResults : ACTION_ICONS.task} size="lg" />}

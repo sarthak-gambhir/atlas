@@ -96,7 +96,7 @@ export function TaskDetailPage() {
         </Inline>
       </Stack>
 
-      <StatGroup>
+      <StatGroup className="atlas-task-stats">
         <Stat label="Score" value={task.score} />
         <Stat label="Impact" value={task.impact} />
         <Stat label="Urgency" value={urgency} />

@@ -11,14 +11,15 @@ import { ACTION_ICONS } from '../lib/icons.ts';
 import { PAGE_ICONS } from '../lib/nav.ts';
 import { useProjects } from '../lib/organization.ts';
 import { useSession } from '../lib/session.ts';
+import { useBooleanParam, useStringParam } from '../lib/urlState.ts';
 
 /** `null` when the form is closed, `{}` when creating, `{ project }` when editing. */
 type FormState = { project?: ProjectDto } | null;
 
 export function ProjectsPage() {
-  const [includeArchived, setIncludeArchived] = useState(false);
-  const [favoritesOnly, setFavoritesOnly] = useState(false);
-  const [search, setSearch] = useState('');
+  const [includeArchived, setIncludeArchived] = useBooleanParam('archived');
+  const [favoritesOnly, setFavoritesOnly] = useBooleanParam('favorites');
+  const [search, setSearch] = useStringParam('q');
   const [form, setForm] = useState<FormState>(null);
 
   const { data: projects, isPending, error } = useProjects(includeArchived);

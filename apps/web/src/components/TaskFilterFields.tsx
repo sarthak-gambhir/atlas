@@ -1,4 +1,4 @@
-import { Button, Input, Select, Stack } from '@astrabound/duality';
+import { Button, Input, MultiSelect, Select, Stack } from '@astrabound/duality';
 import { TASK_STATUSES, type TaskStatus } from '@atlas/shared';
 
 import { useFilterFacets } from '../lib/filterFacets.ts';
@@ -43,14 +43,12 @@ export function TaskFilterFields({
       />
 
       {showStatus ? (
-        <Select
-          value={state.status}
+        <MultiSelect
+          value={state.statuses}
           aria-label="Status"
-          options={[
-            { value: '', label: 'Any status' },
-            ...TASK_STATUSES.map((value) => ({ value, label: STATUS_LABELS[value] })),
-          ]}
-          onValueChange={(value) => set({ status: value as TaskStatus | '' })}
+          placeholder="Any status"
+          options={TASK_STATUSES.map((value) => ({ value, label: STATUS_LABELS[value] }))}
+          onValueChange={(value) => set({ statuses: value as TaskStatus[] })}
         />
       ) : null}
 
@@ -80,32 +78,42 @@ export function TaskFilterFields({
         onValueChange={(value) => set({ assigneeId: value })}
       />
 
-      <Select
-        value={state.tag}
+      <MultiSelect
+        value={state.tags}
         aria-label="Tag"
-        options={[
-          { value: '', label: 'Any tag' },
-          ...(tags ?? [])
-            .filter((tag) => facets.tagNames.has(tag.name) || tag.name === state.tag)
-            .map((tag) => ({
-              value: tag.name,
-              label: `${tag.name} (${facets.tagCounts.get(tag.name) ?? tag.taskCount})`,
-            })),
-        ]}
-        onValueChange={(value) => set({ tag: value })}
+        placeholder="Any tag"
+        options={(tags ?? [])
+          .filter((tag) => facets.tagNames.has(tag.name) || state.tags.includes(tag.name))
+          .map((tag) => ({
+            value: tag.name,
+            label: `${tag.name} (${facets.tagCounts.get(tag.name) ?? tag.taskCount})`,
+          }))}
+        onValueChange={(value) => set({ tags: value })}
       />
 
       {showClosedToggle ? (
-        <Button
-          className="atlas-button"
-          size="md"
-          variant="inverse"
-          onClick={() => set({ includeClosed: !state.includeClosed })}
-        >
-          <IconLabel icon={state.includeClosed ? ACTION_ICONS.hide : ACTION_ICONS.reveal}>
-            {state.includeClosed ? 'Hide closed' : 'Show closed'}
-          </IconLabel>
-        </Button>
+        <>
+          <Button
+            className="atlas-button"
+            size="md"
+            variant="inverse"
+            onClick={() => set({ includeClosed: !state.includeClosed })}
+          >
+            <IconLabel icon={state.includeClosed ? ACTION_ICONS.hide : ACTION_ICONS.reveal}>
+              {state.includeClosed ? 'Hide closed' : 'Show closed'}
+            </IconLabel>
+          </Button>
+          <Button
+            className="atlas-button"
+            size="md"
+            variant="inverse"
+            onClick={() => set({ includeArchived: !state.includeArchived })}
+          >
+            <IconLabel icon={state.includeArchived ? ACTION_ICONS.hide : ACTION_ICONS.reveal}>
+              {state.includeArchived ? 'Hide archived' : 'Show archived'}
+            </IconLabel>
+          </Button>
+        </>
       ) : null}
 
       {isFiltered ? (

@@ -43,6 +43,7 @@ import { PageHeader } from '../components/PageHeader.tsx';
 import { PeoplePanel } from '../components/people/PeoplePanel.tsx';
 import { ACTION_ICONS } from '../lib/icons.ts';
 import { BUCKET_LABELS, CONFIDENCE_LABELS } from '../lib/labels.ts';
+import { PAGE_ICONS } from '../lib/nav.ts';
 import { useSession } from '../lib/session.ts';
 import { useScoringSettings } from '../lib/tasks.ts';
 
@@ -52,7 +53,7 @@ export function SettingsPage() {
 
   return (
     <Stack gap={5}>
-      <PageHeader title="Settings" />
+      <PageHeader title="Settings" icon={PAGE_ICONS.settings} />
 
       <Card>
         <CardBody>

@@ -134,3 +134,9 @@ export function useTransferProjectOwnership() {
     api.post<{ project: ProjectDto }>(`/projects/${id}/owner`, { userId }),
   );
 }
+
+export function useToggleProjectFavorite() {
+  return useProjectMutation(({ id, favorite }: { id: string; favorite: boolean }) =>
+    api.put<{ project: ProjectDto }>(`/projects/${id}/favorite`, { favorite }),
+  );
+}

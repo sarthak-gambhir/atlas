@@ -67,7 +67,7 @@ export function FilterToolbar({
     return (
       <>
         <Button
-          className="atlas-filter-button atlas-icon-button"
+          className="atlas-button atlas-icon-button"
           variant="inverse"
           size="md"
           aria-label={filterLabel}
@@ -75,7 +75,7 @@ export function FilterToolbar({
         >
           <Inline gap={1} align="center">
             <Icon icon={ACTION_ICONS.filter} />
-            {activeCount > 0 ? <Text size="sm">Filters: {activeCount}</Text> : null}
+            {activeCount > 0 ? <Text size="sm">: {activeCount}</Text> : null}
           </Inline>
         </Button>
 

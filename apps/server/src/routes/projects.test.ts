@@ -128,6 +128,49 @@ describe('projects', () => {
     expect(await listProjects('?includeArchived=true')).toHaveLength(1);
   });
 
+  it('favorites are per-user and default off', async () => {
+    const project = await createProject('Favorite me');
+    expect((await listProjects())[0]?.isFavorite).toBe(false);
+
+    const on = await ctx.app.inject({
+      method: 'PUT',
+      url: `/api/projects/${project.id}/favorite`,
+      headers: { cookie },
+      payload: { favorite: true },
+    });
+    expect(on.statusCode).toBe(200);
+    expect(on.json<{ project: ProjectDto }>().project.isFavorite).toBe(true);
+    expect((await listProjects())[0]?.isFavorite).toBe(true);
+
+    // A different viewer's favorite state is independent: grace cannot see the
+    // project at all, but an admin's favorite must not leak onto her responses.
+    const graceView = await ctx.app.inject({
+      method: 'GET',
+      url: `/api/projects/${project.id}`,
+      headers: { cookie: memberCookie },
+    });
+    expect(graceView.statusCode).toBe(404);
+
+    const off = await ctx.app.inject({
+      method: 'PUT',
+      url: `/api/projects/${project.id}/favorite`,
+      headers: { cookie },
+      payload: { favorite: false },
+    });
+    expect(off.json<{ project: ProjectDto }>().project.isFavorite).toBe(false);
+  });
+
+  it('returns 404 favoriting a project the caller cannot see', async () => {
+    const project = await createProject('Hidden');
+    const response = await ctx.app.inject({
+      method: 'PUT',
+      url: `/api/projects/${project.id}/favorite`,
+      headers: { cookie: memberCookie },
+      payload: { favorite: true },
+    });
+    expect(response.statusCode).toBe(404);
+  });
+
   it('keeps tasks when a project is deleted, unlinking them instead', async () => {
     const project = await createProject('Doomed');
     const created = await ctx.app.inject({

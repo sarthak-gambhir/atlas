@@ -14,7 +14,7 @@ export function NotFoundPage() {
       description="That page does not exist."
       action={
         <Button className="atlas-button" size="md" onClick={() => void navigate('/')}>
-          <IconLabel icon={ACTION_ICONS.back}>Back to backlog</IconLabel>
+          <IconLabel icon={ACTION_ICONS.back}>Back to tasks</IconLabel>
         </Button>
       }
     />

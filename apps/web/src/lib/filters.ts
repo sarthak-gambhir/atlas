@@ -3,21 +3,30 @@ import { useMemo, useState } from 'react';
 
 export interface FilterState {
   q: string;
-  status: TaskStatus | '';
+  statuses: TaskStatus[];
   projectId: string;
   assigneeId: string;
-  tag: string;
+  tags: string[];
+  /** Include completed (`done`) tasks. */
   includeClosed: boolean;
+  /** Include archived tasks (independent of `done`). */
+  includeArchived: boolean;
 }
 
 const EMPTY: FilterState = {
   q: '',
-  status: '',
+  statuses: [],
   projectId: '',
   assigneeId: '',
-  tag: '',
+  tags: [],
   includeClosed: false,
+  includeArchived: false,
 };
+
+/** Order-independent equality for the array filters. */
+function sameSet(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((value) => b.includes(value));
+}
 
 export interface UseFilters {
   state: FilterState;
@@ -33,11 +42,12 @@ export interface UseFilters {
 function countActive(state: FilterState, baseline: FilterState): number {
   let count = 0;
   if (state.q.trim() !== baseline.q) count++;
-  if (state.status !== baseline.status) count++;
+  if (!sameSet(state.statuses, baseline.statuses)) count++;
   if (state.projectId !== baseline.projectId) count++;
   if (state.assigneeId !== baseline.assigneeId) count++;
-  if (state.tag !== baseline.tag) count++;
+  if (!sameSet(state.tags, baseline.tags)) count++;
   if (state.includeClosed !== baseline.includeClosed) count++;
+  if (state.includeArchived !== baseline.includeArchived) count++;
   return count;
 }
 
@@ -49,11 +59,12 @@ export function useFilters(initial: Partial<FilterState> = {}): UseFilters {
     const trimmed = state.q.trim();
     return {
       ...(trimmed ? { q: trimmed } : {}),
-      ...(state.status ? { status: state.status } : {}),
+      ...(state.statuses.length ? { statuses: state.statuses } : {}),
       ...(state.projectId ? { projectId: state.projectId } : {}),
       ...(state.assigneeId ? { assigneeId: state.assigneeId } : {}),
-      ...(state.tag ? { tag: state.tag } : {}),
+      ...(state.tags.length ? { tags: state.tags } : {}),
       ...(state.includeClosed ? { includeClosed: true } : {}),
+      ...(state.includeArchived ? { includeArchived: true } : {}),
     };
   }, [state]);
 
@@ -61,11 +72,12 @@ export function useFilters(initial: Partial<FilterState> = {}): UseFilters {
   // (e.g. the board starts with closed included), so Clear has something to do.
   const isFiltered =
     state.q.trim() !== baseline.q ||
-    state.status !== baseline.status ||
+    !sameSet(state.statuses, baseline.statuses) ||
     state.projectId !== baseline.projectId ||
     state.assigneeId !== baseline.assigneeId ||
-    state.tag !== baseline.tag ||
-    state.includeClosed !== baseline.includeClosed;
+    !sameSet(state.tags, baseline.tags) ||
+    state.includeClosed !== baseline.includeClosed ||
+    state.includeArchived !== baseline.includeArchived;
 
   const activeCount = countActive(state, baseline);
 

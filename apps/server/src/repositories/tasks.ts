@@ -1,5 +1,4 @@
 import {
-  CLOSED_STATUSES,
   bucketFor,
   compareTasksByRank,
   computeScore,
@@ -9,6 +8,7 @@ import {
   type ScoringSettings,
   type TaskDto,
   type TaskFilter,
+  type TaskStatus,
   type UpdateTaskInput,
   type UserRole,
 } from '@atlas/shared';
@@ -96,8 +96,16 @@ async function loadTagsByTask(db: Database, taskIds: string[]): Promise<Map<stri
 function buildFilters(db: Database, filter: TaskFilter, viewer: TaskViewer): SQL[] {
   const conditions: SQL[] = [];
 
-  if (filter.status) conditions.push(eq(tasks.status, filter.status));
-  else if (!filter.includeClosed) conditions.push(notInArray(tasks.status, [...CLOSED_STATUSES]));
+  // Explicit status selection wins: show exactly those statuses (even closed
+  // ones), so the done/archived hiding below only applies when none are chosen.
+  if (filter.statuses?.length) {
+    conditions.push(inArray(tasks.status, filter.statuses));
+  } else {
+    const hidden: TaskStatus[] = [];
+    if (!filter.includeClosed) hidden.push('done');
+    if (!filter.includeArchived) hidden.push('archived');
+    if (hidden.length) conditions.push(notInArray(tasks.status, hidden));
+  }
 
   if (filter.projectId) conditions.push(eq(tasks.projectId, filter.projectId));
   if (filter.assigneeId) conditions.push(eq(tasks.assigneeId, filter.assigneeId));
@@ -108,12 +116,14 @@ function buildFilters(db: Database, filter: TaskFilter, viewer: TaskViewer): SQL
     conditions.push(sql`(${tasks.title} ilike ${pattern} or ${tasks.notes} ilike ${pattern})`);
   }
 
-  if (filter.tag) {
+  // A task matches if it carries ANY of the selected tags (OR), case-insensitive.
+  if (filter.tags?.length) {
+    const lowered = filter.tags.map((tag) => sql`${tag.toLowerCase()}`);
     conditions.push(
       sql`exists (
         select 1 from ${taskTags}
         join ${tags} on ${tags.id} = ${taskTags.tagId}
-        where ${taskTags.taskId} = ${tasks.id} and lower(${tags.name}) = lower(${filter.tag})
+        where ${taskTags.taskId} = ${tasks.id} and lower(${tags.name}) in (${sql.join(lowered, sql`, `)})
       )`,
     );
   }

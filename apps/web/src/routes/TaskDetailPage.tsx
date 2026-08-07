@@ -56,7 +56,7 @@ export function TaskDetailPage() {
             action={
               <Link to="/" className="atlas-card-link">
                 <Button className="atlas-button" size="md" variant="solid">
-                  <IconLabel icon={ACTION_ICONS.back}>Back to backlog</IconLabel>
+                  <IconLabel icon={ACTION_ICONS.back}>Back to tasks</IconLabel>
                 </Button>
               </Link>
             }
@@ -80,9 +80,12 @@ export function TaskDetailPage() {
       </Inline>
 
       <Stack gap={2}>
-        <Heading level={1} visualLevel={3}>
-          {task.title}
-        </Heading>
+        <Inline gap={2} align="center">
+          <Icon icon={ACTION_ICONS.task} size="lg" />
+          <Heading level={1} visualLevel={3}>
+            {task.title}
+          </Heading>
+        </Inline>
         <Inline gap={2} align="center">
           <Badge variant="solid">{task.score}</Badge>
           <BucketBadge bucket={task.bucket} />

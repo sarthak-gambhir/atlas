@@ -2,14 +2,13 @@ import {
   Avatar,
   Badge,
   Button,
-  Checkbox,
   ConfirmDialog,
   DataTable,
   Icon,
   Inline,
+  Input,
   Menu,
   MenuItem,
-  Select,
   Stack,
   Text,
   useToast,
@@ -21,7 +20,6 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { ACTION_ICONS } from '../../lib/icons.ts';
 import {
   projectRoleFor,
-  useAddProjectMember,
   useRemoveProjectMember,
   useTransferProjectOwnership,
   useUpdateMemberRole,
@@ -30,6 +28,7 @@ import {
 import { useSession } from '../../lib/session.ts';
 import { useIsMobile } from '../../lib/useIsMobile.ts';
 import { IconLabel } from '../IconLabel.tsx';
+import { ManageMembersModal } from './ManageMembersModal.tsx';
 
 const ROLE_LABELS: Record<'owner' | ProjectMemberRole, string> = {
   owner: 'Owner',
@@ -48,7 +47,6 @@ export function ProjectMembers({ project, canManage }: ProjectMembersProps) {
   const { data: users } = useUsers();
   const { data: session } = useSession();
   const isMobile = useIsMobile();
-  const addMember = useAddProjectMember();
   const removeMember = useRemoveProjectMember();
   const transferOwnership = useTransferProjectOwnership();
   const updateRole = useUpdateMemberRole();
@@ -56,9 +54,8 @@ export function ProjectMembers({ project, canManage }: ProjectMembersProps) {
 
   const [removing, setRemoving] = useState<UserSummaryDto | null>(null);
   const [transferring, setTransferring] = useState<UserSummaryDto | null>(null);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [bulkRemoving, setBulkRemoving] = useState(false);
-  const [bulkPending, setBulkPending] = useState(false);
+  const [managing, setManaging] = useState(false);
+  const [search, setSearch] = useState('');
 
   const members = useMemo(() => {
     const byId = new Map((users ?? []).map((user) => [user.id, user]));
@@ -72,21 +69,16 @@ export function ProjectMembers({ project, canManage }: ProjectMembersProps) {
       });
   }, [users, project.memberIds, project.ownerId]);
 
-  const candidates = (users ?? []).filter(
-    (user) => !user.disabled && !project.memberIds.includes(user.id),
-  );
-
-  const add = (userId: string) => {
-    if (userId === '') return;
-    addMember.mutate(
-      { id: project.id, userId },
-      {
-        onSuccess: () => toast({ title: 'Member added', tone: 'success' }),
-        onError: (cause) =>
-          toast({ title: 'Could not add member', description: cause.message, tone: 'error' }),
-      },
-    );
-  };
+  const query = search.trim().toLowerCase();
+  const visibleMembers =
+    query === ''
+      ? members
+      : members.filter(
+          (member) =>
+            member.displayName.toLowerCase().includes(query) ||
+            member.username.toLowerCase().includes(query),
+        );
+  const emptyMessage = query === '' ? 'No members yet.' : 'No members match.';
 
   const confirmRemove = () => {
     if (!removing) return;
@@ -101,26 +93,6 @@ export function ProjectMembers({ project, canManage }: ProjectMembersProps) {
           toast({ title: 'Could not remove member', description: cause.message, tone: 'error' }),
       },
     );
-  };
-
-  // The owner cannot be removed, so drop it from any bulk selection.
-  const removableSelected = selectedIds.filter((id) => id !== project.ownerId);
-
-  const confirmBulkRemove = async () => {
-    setBulkPending(true);
-    const results = await Promise.allSettled(
-      removableSelected.map((userId) => removeMember.mutateAsync({ id: project.id, userId })),
-    );
-    setBulkPending(false);
-    const removed = results.filter((result) => result.status === 'fulfilled').length;
-    const failed = results.length - removed;
-    const skippedOwner = selectedIds.length - removableSelected.length;
-    const parts = [`${removed} removed`];
-    if (skippedOwner > 0) parts.push(`${skippedOwner} skipped (owner)`);
-    if (failed > 0) parts.push(`${failed} failed`);
-    toast({ title: parts.join(', '), tone: failed > 0 ? 'error' : 'success' });
-    setSelectedIds([]);
-    setBulkRemoving(false);
   };
 
   const changeRole = (member: UserSummaryDto, role: ProjectMemberRole) => {
@@ -203,8 +175,6 @@ export function ProjectMembers({ project, canManage }: ProjectMembersProps) {
         sortable: true,
         cell: (member) => (
           <Inline gap={2} align="center">
-            {/* Marks the owner's row so its selection checkbox can be hidden via CSS. */}
-            {member.id === project.ownerId ? <span data-atlas-owner hidden /> : null}
             <Avatar name={member.displayName} size="sm" />
             <Stack gap={0}>
               <Inline gap={2} align="center">
@@ -258,60 +228,42 @@ export function ProjectMembers({ project, canManage }: ProjectMembersProps) {
 
   return (
     <Stack gap={3}>
-      {canManage && candidates.length > 0 ? (
-        <Inline justify="end">
-          <Select
-            value=""
-            aria-label="Add a member"
-            placeholder="Add a member"
-            disabled={addMember.isPending}
-            options={[
-              { value: '', label: 'Add a member' },
-              ...candidates.map((user) => ({
-                value: user.id,
-                label: `${user.displayName} (@${user.username})`,
-              })),
-            ]}
-            onValueChange={add}
+      <Inline gap={2} align="center" justify="between" wrap={false}>
+        <div style={{ flex: 1, minInlineSize: 0 }}>
+          <Input
+            size="lg"
+            value={search}
+            placeholder="Search members"
+            clearable
+            aria-label="Search members"
+            onClear={() => setSearch('')}
+            onChange={(event) => setSearch(event.target.value)}
           />
-        </Inline>
-      ) : null}
-
-      {canManage && removableSelected.length > 0 ? (
-        <Inline gap={2} align="center" justify="between">
-          <Badge variant="solid">{removableSelected.length} selected</Badge>
-          <Button variant="inverse" onClick={() => setBulkRemoving(true)}>
-            <IconLabel icon={ACTION_ICONS.delete}>Remove selected</IconLabel>
+        </div>
+        {canManage ? (
+          <Button
+            className="atlas-button"
+            size="md"
+            variant="solid"
+            onClick={() => setManaging(true)}
+          >
+            <IconLabel icon={ACTION_ICONS.members}>Manage members</IconLabel>
           </Button>
-        </Inline>
-      ) : null}
+        ) : null}
+      </Inline>
 
       {isMobile ? (
-        members.length === 0 ? (
-          <Text size="sm">No members yet.</Text>
+        visibleMembers.length === 0 ? (
+          <Text size="sm">{emptyMessage}</Text>
         ) : (
           <Stack gap={2}>
-            {members.map((member) => {
+            {visibleMembers.map((member) => {
               const role = projectRoleFor(project, member.id) ?? 'editor';
-              const isOwner = member.id === project.ownerId;
               return (
                 <div key={member.id} className="atlas-record-card">
                   <Stack gap={2}>
                     <Inline gap={2} align="start" justify="between" wrap={false}>
                       <Inline gap={3} align="center" style={{ minWidth: 0 }}>
-                        {canManage && !isOwner ? (
-                          <Checkbox
-                            aria-label={`Select ${member.displayName}`}
-                            checked={selectedIds.includes(member.id)}
-                            onChange={(event) =>
-                              setSelectedIds((prev) =>
-                                event.target.checked
-                                  ? [...new Set([...prev, member.id])]
-                                  : prev.filter((id) => id !== member.id),
-                              )
-                            }
-                          />
-                        ) : null}
                         <Avatar name={member.displayName} size="sm" />
                         <Stack gap={0}>
                           <Inline gap={2} align="center">
@@ -346,14 +298,10 @@ export function ProjectMembers({ project, canManage }: ProjectMembersProps) {
           aria-label={`Members of ${project.name}`}
           className={canManage ? 'atlas-actions-table' : undefined}
           columns={columns}
-          data={members}
+          data={visibleMembers}
           getRowId={(member) => member.id}
-          filterable={true}
-          filterPlaceholder="Search members"
-          emptyMessage="No members yet."
-          selectable={canManage}
-          selectedIds={canManage ? selectedIds : undefined}
-          onSelectionChange={canManage ? (ids) => setSelectedIds(ids.map(String)) : undefined}
+          filterable={false}
+          emptyMessage={emptyMessage}
           stickyHeader
           pageSize={10}
         />
@@ -371,17 +319,6 @@ export function ProjectMembers({ project, canManage }: ProjectMembersProps) {
       />
 
       <ConfirmDialog
-        isOpen={bulkRemoving}
-        tone="danger"
-        title={`Remove ${removableSelected.length} member${removableSelected.length === 1 ? '' : 's'}?`}
-        description="They lose access to this project, and any tasks assigned to them here become unassigned."
-        confirmLabel="Remove"
-        isLoading={bulkPending}
-        onCancel={() => setBulkRemoving(false)}
-        onConfirm={() => void confirmBulkRemove()}
-      />
-
-      <ConfirmDialog
         isOpen={transferring != null}
         title={transferring ? `Make ${transferring.displayName} the owner?` : 'Transfer ownership?'}
         description="They will be able to edit, archive and manage members. You stay a member."
@@ -390,6 +327,15 @@ export function ProjectMembers({ project, canManage }: ProjectMembersProps) {
         onCancel={() => setTransferring(null)}
         onConfirm={confirmTransfer}
       />
+
+      {managing ? (
+        <ManageMembersModal
+          project={project}
+          canManage={canManage}
+          isOpen
+          onClose={() => setManaging(false)}
+        />
+      ) : null}
     </Stack>
   );
 }

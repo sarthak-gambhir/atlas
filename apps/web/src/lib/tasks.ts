@@ -21,7 +21,13 @@ export const taskKeys = {
 function toSearch(filter: TaskFilter): string {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(filter)) {
-    if (value != null && value !== '') params.set(key, String(value));
+    if (value == null || value === '') continue;
+    // Arrays (statuses, tags) become repeated keys: ?statuses=a&statuses=b.
+    if (Array.isArray(value)) {
+      for (const item of value) params.append(key, String(item));
+    } else {
+      params.set(key, String(value));
+    }
   }
   const query = params.toString();
   return query ? `?${query}` : '';

@@ -35,6 +35,12 @@ interface TaskTableProps {
   ariaLabel?: string;
   /** Archived-project view: no row editing, selection or Done action. */
   readOnly?: boolean;
+  /**
+   * When set, only tasks whose project is in this list are shown. Kept
+   * client-side (the server has no multi-project filter) for the Tasks page's
+   * "In favorite projects" quick filter.
+   */
+  restrictProjectIds?: string[];
 }
 
 /**
@@ -46,6 +52,7 @@ export function TaskTable({
   emptyState,
   ariaLabel = 'Ranked tasks',
   readOnly = false,
+  restrictProjectIds,
 }: TaskTableProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const navigate = useNavigate();
@@ -59,10 +66,18 @@ export function TaskTable({
   const update = useUpdateTask();
   const { toast } = useToast();
 
+  // The rows actually shown: the server list, optionally narrowed to a set of
+  // projects (the "In favorite projects" quick filter has no server equivalent).
+  const visibleTasks = useMemo(() => {
+    if (!restrictProjectIds) return tasks;
+    const allowed = new Set(restrictProjectIds);
+    return (tasks ?? []).filter((task) => task.projectId != null && allowed.has(task.projectId));
+  }, [tasks, restrictProjectIds]);
+
   // A selection outlives a filter change, so only act on rows still on screen.
   const activeSelection = useMemo(
-    () => selectedIds.filter((id) => tasks?.some((task) => task.id === id) ?? false),
-    [selectedIds, tasks],
+    () => selectedIds.filter((id) => visibleTasks?.some((task) => task.id === id) ?? false),
+    [selectedIds, visibleTasks],
   );
 
   const toggleOne = useCallback((id: string, checked: boolean) => {
@@ -259,17 +274,17 @@ export function TaskTable({
         <BulkActionBar ids={activeSelection} onDone={() => setSelectedIds([])} />
       ) : null}
 
-      {!isPending && tasks && tasks.length === 0 ? (
+      {!isPending && visibleTasks && visibleTasks.length === 0 ? (
         emptyState
       ) : isMobile ? (
         <TaskCardList
-          tasks={tasks ?? []}
+          tasks={visibleTasks ?? []}
           isLoading={isPending}
           selectable={!readOnly}
           selectedIds={activeSelection}
           onToggle={toggleOne}
           onToggleAll={(checked) =>
-            setSelectedIds(checked ? (tasks ?? []).map((task) => task.id) : [])
+            setSelectedIds(checked ? (visibleTasks ?? []).map((task) => task.id) : [])
           }
           renderAction={renderRowAction}
           onOpen={(id) => void navigate(`/tasks/${id}`)}
@@ -292,7 +307,7 @@ export function TaskTable({
           <DataTable
             aria-label={ariaLabel}
             columns={columns}
-            data={tasks ?? []}
+            data={visibleTasks ?? []}
             getRowId={(task) => task.id}
             filterable={false}
             isLoading={isPending}

@@ -9,11 +9,14 @@ import {
   TruncatedText,
 } from '@astrabound/duality';
 import type { ProjectDto } from '@atlas/shared';
-import { Link } from 'react-router';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router';
 
 import { canManageProject } from '../../lib/organization.ts';
 import { ProjectIcon } from '../../lib/projectIcons.tsx';
 import { useSession } from '../../lib/session.ts';
+import { FavoriteButton } from './FavoriteButton.tsx';
+import { ManageMembersModal } from './ManageMembersModal.tsx';
 import { ProjectRowActions } from './ProjectRowActions.tsx';
 import { ICON_SIZES } from '../../lib/icons.ts';
 import { TagBadge } from '../TagBadge.tsx';
@@ -26,31 +29,45 @@ interface ProjectCardProps {
 
 export function ProjectCard({ project, isAdmin, onEdit }: ProjectCardProps) {
   const { data: session } = useSession();
+  const navigate = useNavigate();
   const canManage = canManageProject(project, session);
+  const [managingMembers, setManagingMembers] = useState(false);
   const { openTaskCount, doneTaskCount, totalTaskCount } = project;
   const percent = totalTaskCount > 0 ? Math.round((doneTaskCount / totalTaskCount) * 100) : 0;
+  const openProject = () => void navigate(`/projects/${project.id}`);
 
   return (
-    <Card style={{ display: 'flex', flexDirection: 'column' }}>
+    <Card
+      className="atlas-project-card"
+      style={{ display: 'flex', flexDirection: 'column' }}
+    >
       <CardBody style={{ flex: 1 }}>
         <Stack gap={3}>
           <Stack gap={2}>
             <Inline gap={2} align="center" justify="between" wrap={false}>
               <ProjectIcon icon={project.icon} size={ICON_SIZES.xxl} />
 
-              <Inline gap={2} align="center" wrap={false}>
-                {project.archivedAt ? <Badge variant="outline">Archived</Badge> : null}
-                <ProjectRowActions
-                  project={project}
-                  canManage={canManage}
-                  isAdmin={isAdmin}
-                  onEdit={onEdit}
-                />
-              </Inline>
+              <div className="atlas-project-card__actions">
+                <Inline gap={2} align="center" wrap={false}>
+                  {project.archivedAt ? <Badge variant="outline">Archived</Badge> : null}
+                  <FavoriteButton project={project} />
+                  <ProjectRowActions
+                    project={project}
+                    canManage={canManage}
+                    isAdmin={isAdmin}
+                    onEdit={onEdit}
+                    onView={openProject}
+                    onManageMembers={canManage ? () => setManagingMembers(true) : undefined}
+                  />
+                </Inline>
+              </div>
             </Inline>
 
             <Stack gap={1}>
-              <Link to={`/projects/${project.id}`} className="atlas-card-link">
+              <Link
+                to={`/projects/${project.id}`}
+                className="atlas-card-link atlas-card-link-stretch"
+              >
                 <TruncatedText lines={2} size="lg" weight="bold">
                   {project.name}
                 </TruncatedText>
@@ -92,6 +109,15 @@ export function ProjectCard({ project, isAdmin, onEdit }: ProjectCardProps) {
           </Text>
         </Stack>
       </CardFooter>
+
+      {managingMembers ? (
+        <ManageMembersModal
+          project={project}
+          canManage={canManage}
+          isOpen
+          onClose={() => setManagingMembers(false)}
+        />
+      ) : null}
     </Card>
   );
 }

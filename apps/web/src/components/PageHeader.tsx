@@ -1,8 +1,11 @@
-import { Badge, Heading, Inline, Stack, Text } from '@astrabound/duality';
+import { Badge, Heading, Icon, Inline, Stack, Text } from '@astrabound/duality';
+import type { IconType } from 'react-icons';
 import type { ReactNode } from 'react';
 
 interface PageHeaderProps {
   title: string;
+  /** Glyph shown before the title; usually the page's nav icon (see PAGE_ICONS). */
+  icon?: IconType;
   /** Optional count chip beside the title, e.g. the number of tasks. */
   count?: number;
   description?: string;
@@ -11,11 +14,12 @@ interface PageHeaderProps {
 }
 
 /** One title/description/action block, so every route lines up the same way. */
-export function PageHeader({ title, count, description, actions }: PageHeaderProps) {
+export function PageHeader({ title, icon, count, description, actions }: PageHeaderProps) {
   return (
     <Stack gap={1}>
       <Inline gap={3} align="center" justify="between" wrap>
         <Inline gap={2} align="center">
+          {icon ? <Icon icon={icon} size="lg" /> : null}
           <Heading level={1} visualLevel={3}>
             {title}
           </Heading>

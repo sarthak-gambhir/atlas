@@ -1,4 +1,3 @@
-import { CLOSED_STATUSES } from '@atlas/shared';
 import { useMemo } from 'react';
 
 import type { FilterState } from './filters.ts';
@@ -39,25 +38,34 @@ export interface FilterFacets {
 export function useFilterFacets(state: FilterState, excludeArchived = false): FilterFacets {
   // Unfiltered (but visibility-scoped) task list; closed included so options are
   // complete and stable across pages. Shares the Board's cache key.
-  const { data: tasks } = useTasks({ includeClosed: true });
+  const { data: tasks } = useTasks({ includeClosed: true, includeArchived: true });
   const { data: projects } = useProjects();
   const { data: users } = useUsers();
   const { data: tags } = useTags();
 
-  const { projectId, assigneeId, tag, status, includeClosed } = state;
+  const { projectId, assigneeId, tags: selectedTags, statuses, includeClosed, includeArchived } =
+    state;
 
   return useMemo<FilterFacets>(() => {
     const allProjectIds = new Set((projects ?? []).map((p) => p.id));
     const activeUserIds = new Set((users ?? []).filter((u) => !u.disabled).map((u) => u.id));
     const tasksLoaded = tasks != null;
 
+    // A task matches the tag selection if it carries ANY selected tag (OR); an
+    // empty selection matches everything.
+    const hasTagSelection = selectedTags.length > 0;
+    const matchesTags = (t: { tags: string[] }) =>
+      !hasTagSelection || t.tags.some((name) => selectedTags.includes(name));
+
     // The tasks the page actually displays, so task-derived options and counts
-    // line up with what's on screen (status filter, closed visibility, and the
-    // board hiding archived).
+    // line up with what's on screen: explicit statuses win, otherwise done is
+    // hidden unless includeClosed and archived unless includeArchived (the board
+    // additionally never shows archived).
     const scoped = (tasks ?? []).filter((t) => {
       if (excludeArchived && t.status === 'archived') return false;
-      if (status) return t.status === status;
-      if (!includeClosed) return !CLOSED_STATUSES.includes(t.status);
+      if (statuses.length) return statuses.includes(t.status);
+      if (!includeClosed && t.status === 'done') return false;
+      if (!includeArchived && t.status === 'archived') return false;
       return true;
     });
 
@@ -65,24 +73,22 @@ export function useFilterFacets(state: FilterState, excludeArchived = false): Fi
     const projectsForAssignee = () =>
       new Set((projects ?? []).filter((p) => p.memberIds.includes(assigneeId)).map((p) => p.id));
     let projectIds: Set<string>;
-    if (assigneeId && tag) {
+    if (assigneeId && hasTagSelection) {
       // Task-derived; before tasks load, fall back to the assignee's memberships.
       projectIds = tasksLoaded
         ? new Set(
             scoped
-              .filter(
-                (t) => t.assigneeId === assigneeId && t.tags.includes(tag) && t.projectId != null,
-              )
+              .filter((t) => t.assigneeId === assigneeId && matchesTags(t) && t.projectId != null)
               .map((t) => t.projectId as string),
           )
         : projectsForAssignee();
     } else if (assigneeId) {
       projectIds = projectsForAssignee();
-    } else if (tag) {
+    } else if (hasTagSelection) {
       projectIds = tasksLoaded
         ? new Set(
             scoped
-              .filter((t) => t.tags.includes(tag) && t.projectId != null)
+              .filter((t) => matchesTags(t) && t.projectId != null)
               .map((t) => t.projectId as string),
           )
         : new Set(allProjectIds);
@@ -96,24 +102,22 @@ export function useFilterFacets(state: FilterState, excludeArchived = false): Fi
     const membersOfProject = () =>
       new Set((projects ?? []).find((p) => p.id === projectId)?.memberIds ?? []);
     let assigneeIds: Set<string>;
-    if (projectId && tag) {
+    if (projectId && hasTagSelection) {
       // Task-derived; before tasks load, fall back to the project's members.
       assigneeIds = tasksLoaded
         ? new Set(
             scoped
-              .filter(
-                (t) => t.projectId === projectId && t.tags.includes(tag) && t.assigneeId != null,
-              )
+              .filter((t) => t.projectId === projectId && matchesTags(t) && t.assigneeId != null)
               .map((t) => t.assigneeId as string),
           )
         : membersOfProject();
     } else if (projectId) {
       assigneeIds = membersOfProject();
-    } else if (tag) {
+    } else if (hasTagSelection) {
       assigneeIds = tasksLoaded
         ? new Set(
             scoped
-              .filter((t) => t.tags.includes(tag) && t.assigneeId != null)
+              .filter((t) => matchesTags(t) && t.assigneeId != null)
               .map((t) => t.assigneeId as string),
           )
         : new Set(activeUserIds);
@@ -142,5 +146,17 @@ export function useFilterFacets(state: FilterState, excludeArchived = false): Fi
     }
 
     return { projectIds, assigneeIds, tagNames, tagCounts };
-  }, [tasks, projects, users, tags, projectId, assigneeId, tag, status, includeClosed, excludeArchived]);
+  }, [
+    tasks,
+    projects,
+    users,
+    tags,
+    projectId,
+    assigneeId,
+    selectedTags,
+    statuses,
+    includeClosed,
+    includeArchived,
+    excludeArchived,
+  ]);
 }

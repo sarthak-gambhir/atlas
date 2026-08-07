@@ -10,6 +10,7 @@ import { PageHeader } from '../components/PageHeader.tsx';
 import { todayIso } from '../lib/dates.ts';
 import { useFilters } from '../lib/filters.ts';
 import { BOARD_STATUSES, STATUS_LABELS } from '../lib/labels.ts';
+import { PAGE_ICONS } from '../lib/nav.ts';
 import { useTasks, useUpdateTask } from '../lib/tasks.ts';
 
 export function BoardPage() {
@@ -57,6 +58,7 @@ export function BoardPage() {
     <Stack gap={4}>
       <PageHeader
         title="Board"
+        icon={PAGE_ICONS.board}
         actions={
           <TaskFilterToolbar
             filters={filters}
@@ -75,12 +77,12 @@ export function BoardPage() {
 
       <Text size="sm">
         Active work grouped by status, highest score first. Archived tasks are hidden here; open
-        the backlog and show closed tasks to see them.
+        Tasks and turn on “Show archived” to see them.
       </Text>
 
       {error ? <Alert tone="error">{error.message}</Alert> : null}
 
-      <Grid minChildWidth={260} gap={3} align="start">
+      <Grid minChildWidth={320} gap={3} align="start">
         {isPending
           ? BOARD_STATUSES.map((status) => <Skeleton key={status} height={160} />)
           : BOARD_STATUSES.map((status) => (

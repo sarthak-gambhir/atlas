@@ -101,18 +101,34 @@ export const bulkUpdateSchema = z.object({
 });
 export type BulkUpdateInput = z.infer<typeof bulkUpdateSchema>;
 
+/**
+ * A multi-value querystring param: a repeated key (`?statuses=a&statuses=b`)
+ * arrives as an array, a single key as a scalar. Normalize both to an array and
+ * drop empties so an all-cleared filter omits the field entirely.
+ */
+const arrayParam = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess((value) => {
+    if (value == null) return undefined;
+    const list = Array.isArray(value) ? value : [value];
+    return list.length > 0 ? list : undefined;
+  }, z.array(schema).optional());
+
+const booleanParam = z
+  .union([z.boolean(), z.literal('true'), z.literal('false')])
+  .transform((value) => value === true || value === 'true')
+  .optional();
+
 export const taskFilterSchema = z.object({
-  status: taskStatusSchema.optional(),
+  statuses: arrayParam(taskStatusSchema),
   projectId: z.uuid().optional(),
   assigneeId: z.uuid().optional(),
-  tag: tagNameSchema.optional(),
+  tags: arrayParam(tagNameSchema),
   q: z.string().trim().max(200).optional(),
   dueBefore: isoDateSchema.optional(),
-  /** Done and archived work is hidden unless asked for. */
-  includeClosed: z
-    .union([z.boolean(), z.literal('true'), z.literal('false')])
-    .transform((value) => value === true || value === 'true')
-    .optional(),
+  /** Completed (`done`) work is hidden unless asked for. */
+  includeClosed: booleanParam,
+  /** Archived work is hidden unless asked for, independent of `done`. */
+  includeArchived: booleanParam,
 });
 export type TaskFilter = z.infer<typeof taskFilterSchema>;
 
@@ -185,6 +201,8 @@ export interface ProjectDto {
   doneTaskCount: number;
   /** Every task attached to the project, regardless of status. */
   totalTaskCount: number;
+  /** Whether the requesting user has favorited this project (per-user). */
+  isFavorite: boolean;
   createdAt: string;
 }
 

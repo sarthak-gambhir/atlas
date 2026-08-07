@@ -26,7 +26,7 @@ function count(value: unknown[] | undefined): number | string {
 
 export function DataPanel() {
   const { toast } = useToast();
-  const { data: tasks } = useTasks({ includeClosed: true });
+  const { data: tasks } = useTasks({ includeClosed: true, includeArchived: true });
   const { data: projects } = useProjects(true);
   const { data: tags } = useTags();
   const { data: users } = useUsers();

@@ -159,8 +159,8 @@ describe('GET /api/tasks', () => {
     await createTask({ title: 'infra upgrade', tags: ['infra'] });
     await createTask({ title: 'write docs', tags: ['docs'], status: 'in_progress' });
 
-    expect((await listTasks('?tag=infra')).map((t) => t.title)).toEqual(['infra upgrade']);
-    expect((await listTasks('?status=in_progress')).map((t) => t.title)).toEqual(['write docs']);
+    expect((await listTasks('?tags=infra')).map((t) => t.title)).toEqual(['infra upgrade']);
+    expect((await listTasks('?statuses=in_progress')).map((t) => t.title)).toEqual(['write docs']);
     expect((await listTasks('?q=docs')).map((t) => t.title)).toEqual(['write docs']);
   });
 

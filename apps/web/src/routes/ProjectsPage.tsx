@@ -5,9 +5,11 @@ import { useMemo, useState } from 'react';
 import { ProjectFilterToolbar } from '../components/FilterToolbar.tsx';
 import { IconLabel } from '../components/IconLabel.tsx';
 import { PageHeader } from '../components/PageHeader.tsx';
+import { QuickFilterBar, QuickFilterChip } from '../components/QuickFilterChip.tsx';
 import { ProjectCard } from '../components/projects/ProjectCard.tsx';
 import { ProjectFormModal } from '../components/projects/ProjectFormModal.tsx';
 import { ACTION_ICONS } from '../lib/icons.ts';
+import { PAGE_ICONS } from '../lib/nav.ts';
 import { useProjects } from '../lib/organization.ts';
 import { useSession } from '../lib/session.ts';
 
@@ -16,6 +18,7 @@ type FormState = { project?: ProjectDto } | null;
 
 export function ProjectsPage() {
   const [includeArchived, setIncludeArchived] = useState(false);
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [search, setSearch] = useState('');
   const [form, setForm] = useState<FormState>(null);
 
@@ -24,28 +27,38 @@ export function ProjectsPage() {
   const isAdmin = session?.role === 'admin';
 
   const trimmedSearch = search.trim();
-  const isFiltered = trimmedSearch !== '' || includeArchived;
-  const activeCount = (trimmedSearch ? 1 : 0) + (includeArchived ? 1 : 0);
+  const isFiltered = trimmedSearch !== '' || includeArchived || favoritesOnly;
+  const activeCount =
+    (trimmedSearch ? 1 : 0) + (includeArchived ? 1 : 0) + (favoritesOnly ? 1 : 0);
 
   const filtered = useMemo(() => {
     const query = trimmedSearch.toLowerCase();
-    if (query === '') return projects ?? [];
-    return (projects ?? []).filter(
-      (project) =>
+    const matched = (projects ?? []).filter((project) => {
+      if (favoritesOnly && !project.isFavorite) return false;
+      if (query === '') return true;
+      return (
         project.name.toLowerCase().includes(query) ||
-        (project.description?.toLowerCase().includes(query) ?? false),
-    );
-  }, [projects, trimmedSearch]);
+        (project.description?.toLowerCase().includes(query) ?? false)
+      );
+    });
+    // Favorites float to the top (per-viewer), then the server's alphabetical order.
+    return [...matched].sort((a, b) => {
+      if (a.isFavorite !== b.isFavorite) return a.isFavorite ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+  }, [projects, trimmedSearch, favoritesOnly]);
 
   const clearFilters = () => {
     setSearch('');
     setIncludeArchived(false);
+    setFavoritesOnly(false);
   };
 
   return (
     <Stack gap={4}>
       <PageHeader
         title="Projects"
+        icon={PAGE_ICONS.projects}
         count={projects?.length}
         actions={
           <Inline gap={2} align="center">
@@ -64,6 +77,23 @@ export function ProjectsPage() {
           </Inline>
         }
       />
+
+      <QuickFilterBar>
+        <QuickFilterChip
+          icon={ACTION_ICONS.favorite}
+          active={favoritesOnly}
+          onToggle={() => setFavoritesOnly((prev) => !prev)}
+        >
+          Favorites
+        </QuickFilterChip>
+        <QuickFilterChip
+          icon={ACTION_ICONS.archive}
+          active={includeArchived}
+          onToggle={() => setIncludeArchived((prev) => !prev)}
+        >
+          Show archived
+        </QuickFilterChip>
+      </QuickFilterBar>
 
       {error ? <Alert tone="error">{error.message}</Alert> : null}
 

@@ -20,6 +20,7 @@ import { Link, useNavigate, useParams } from 'react-router';
 
 import { IconLabel } from '../components/IconLabel.tsx';
 import { TaskTable } from '../components/TaskTable.tsx';
+import { FavoriteButton } from '../components/projects/FavoriteButton.tsx';
 import { ProjectFormModal } from '../components/projects/ProjectFormModal.tsx';
 import { ProjectMembers } from '../components/projects/ProjectMembers.tsx';
 import { ProjectRowActions } from '../components/projects/ProjectRowActions.tsx';
@@ -98,6 +99,7 @@ export function ProjectDetailPage() {
 
         <Inline gap={2} align="center">
           {archived ? <Badge variant="outline">Archived</Badge> : null}
+          <FavoriteButton project={project} />
           {readOnly ? null : (
             <Button
               className="atlas-button"
@@ -150,7 +152,7 @@ export function ProjectDetailPage() {
 
         <TabPanel value="tasks">
           <TaskTable
-            query={{ projectId: project.id, includeClosed: true }}
+            query={{ projectId: project.id, includeClosed: true, includeArchived: true }}
             ariaLabel={`Tasks in ${project.name}`}
             readOnly={readOnly}
             emptyState={

@@ -13,12 +13,24 @@ export interface NavItem {
   Icon: IconType;
 }
 
+/**
+ * Canonical glyph per top-level page, so the sidebar and each page's title
+ * icon (see PageHeader) stay in lockstep.
+ */
+export const PAGE_ICONS = {
+  tasks: RiListCheck2,
+  board: RiLayoutColumnLine,
+  matrix: RiGridLine,
+  projects: RiFolderLine,
+  settings: RiSettings3Line,
+} satisfies Record<string, IconType>;
+
 export const NAV_ITEMS: readonly NavItem[] = [
-  { path: '/', label: 'Tasks', Icon: RiListCheck2 },
-  { path: '/board', label: 'Board', Icon: RiLayoutColumnLine },
-  { path: '/matrix', label: 'Matrix', Icon: RiGridLine },
-  { path: '/projects', label: 'Projects', Icon: RiFolderLine },
-  { path: '/settings', label: 'Settings', Icon: RiSettings3Line },
+  { path: '/', label: 'Tasks', Icon: PAGE_ICONS.tasks },
+  { path: '/board', label: 'Board', Icon: PAGE_ICONS.board },
+  { path: '/matrix', label: 'Matrix', Icon: PAGE_ICONS.matrix },
+  { path: '/projects', label: 'Projects', Icon: PAGE_ICONS.projects },
+  { path: '/settings', label: 'Settings', Icon: PAGE_ICONS.settings },
 ];
 
 /** The longest nav path the current location sits under, for highlighting. */

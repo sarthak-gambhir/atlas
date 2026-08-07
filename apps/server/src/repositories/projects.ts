@@ -9,7 +9,14 @@ import {
 import { and, asc, eq, exists, inArray, isNull, notInArray, sql } from 'drizzle-orm';
 
 import type { Database } from '../db/index.ts';
-import { projectDefaultTags, projectMembers, projects, tags, tasks } from '../db/schema.ts';
+import {
+  projectDefaultTags,
+  projectFavorites,
+  projectMembers,
+  projects,
+  tags,
+  tasks,
+} from '../db/schema.ts';
 
 type ProjectRow = typeof projects.$inferSelect;
 type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0];
@@ -36,6 +43,7 @@ function toDto(
   counts: Counts,
   defaultTags: string[],
   members: Member[],
+  isFavorite: boolean,
 ): ProjectDto {
   return {
     id: row.id,
@@ -56,6 +64,7 @@ function toDto(
     openTaskCount: counts.openTaskCount,
     doneTaskCount: counts.doneTaskCount,
     totalTaskCount: counts.totalTaskCount,
+    isFavorite,
     createdAt: row.createdAt.toISOString(),
   };
 }
@@ -116,6 +125,27 @@ async function loadMembers(db: Database, projectIds: string[]): Promise<Map<stri
   return byProject;
 }
 
+/** The subset of `projectIds` that `userId` has favorited. */
+async function loadFavorites(
+  db: Database,
+  projectIds: string[],
+  userId: string,
+): Promise<Set<string>> {
+  if (projectIds.length === 0 || !userId) return new Set();
+
+  const rows = await db
+    .select({ projectId: projectFavorites.projectId })
+    .from(projectFavorites)
+    .where(
+      and(
+        eq(projectFavorites.userId, userId),
+        inArray(projectFavorites.projectId, projectIds),
+      ),
+    );
+
+  return new Set(rows.map((row) => row.projectId));
+}
+
 /** Correlated `exists` so non-admins only match projects they belong to. */
 function memberOnly(db: Database, viewer: ProjectViewer) {
   return exists(
@@ -146,9 +176,10 @@ export async function listProjects(
     .orderBy(asc(projects.name));
 
   const ids = rows.map((row) => row.project.id);
-  const [tagsByProject, membersByProject] = await Promise.all([
+  const [tagsByProject, membersByProject, favorites] = await Promise.all([
     loadDefaultTags(db, ids),
     loadMembers(db, ids),
+    loadFavorites(db, ids, viewer.id),
   ]);
 
   return rows.map((row) =>
@@ -161,6 +192,7 @@ export async function listProjects(
       },
       tagsByProject.get(row.project.id) ?? [],
       membersByProject.get(row.project.id) ?? [],
+      favorites.has(row.project.id),
     ),
   );
 }
@@ -179,9 +211,10 @@ export async function getProject(
 
   if (!row) return undefined;
 
-  const [tagsByProject, membersByProject] = await Promise.all([
+  const [tagsByProject, membersByProject, favorites] = await Promise.all([
     loadDefaultTags(db, [id]),
     loadMembers(db, [id]),
+    loadFavorites(db, [id], viewer.id),
   ]);
   const members = membersByProject.get(id) ?? [];
 
@@ -199,6 +232,7 @@ export async function getProject(
     },
     tagsByProject.get(id) ?? [],
     members,
+    favorites.has(id),
   );
 }
 
@@ -450,6 +484,24 @@ export async function removeProjectMember(
   });
 
   return getProject(db, projectId, { id: '', role: 'admin' });
+}
+
+/** Sets or clears the viewer's favorite flag on a project. Idempotent. */
+export async function setProjectFavorite(
+  db: Database,
+  projectId: string,
+  userId: string,
+  favorite: boolean,
+): Promise<void> {
+  if (favorite) {
+    await db.insert(projectFavorites).values({ projectId, userId }).onConflictDoNothing();
+  } else {
+    await db
+      .delete(projectFavorites)
+      .where(
+        and(eq(projectFavorites.projectId, projectId), eq(projectFavorites.userId, userId)),
+      );
+  }
 }
 
 /** Tasks survive: the foreign key nulls their `project_id`. */

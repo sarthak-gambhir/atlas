@@ -164,7 +164,7 @@ export function AppShell() {
       <Icon icon={ACTION_ICONS.search} />
     </Button>
   ) : (
-    <Button variant="ghost" size="sm" onClick={() => setPaletteOpen(true)}>
+    <Button variant="solid" size="sm" onClick={() => setPaletteOpen(true)}>
       <Inline gap={2} align="center">
         <span>Search</span>
         <Kbd>Ctrl</Kbd>

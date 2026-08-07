@@ -43,6 +43,13 @@
       "when": 1785655800000,
       "tag": "0005_flowery_kylun",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1786116213063,
+      "tag": "0006_third_sauron",
+      "breakpoints": true
     }
   ]
 }

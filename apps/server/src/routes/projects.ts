@@ -17,6 +17,7 @@ import {
   isProjectMember,
   listProjects,
   removeProjectMember,
+  setProjectFavorite,
   transferProjectOwnership,
   updateMemberRole,
   updateProject,
@@ -26,6 +27,7 @@ import { findUserById } from '../repositories/users.ts';
 
 const idParamsSchema = z.object({ id: z.uuid() });
 const memberParamsSchema = z.object({ id: z.uuid(), userId: z.uuid() });
+const favoriteSchema = z.object({ favorite: z.boolean() });
 const listQuerySchema = z.object({
   includeArchived: z
     .union([z.boolean(), z.literal('true'), z.literal('false')])
@@ -183,6 +185,21 @@ export const organizationRoutes: FastifyPluginAsync = async (app) => {
     const project = await removeProjectMember(app.db, id, userId);
     if (!project) return reply.code(404).send({ error: 'not_found', message: 'No such project.' });
     return { project };
+  });
+
+  app.put('/projects/:id/favorite', async (request, reply) => {
+    const { id } = idParamsSchema.parse(request.params);
+    const { favorite } = favoriteSchema.parse(request.body);
+    const viewer = { id: request.user!.id, role: request.user!.role };
+
+    // Favoriting requires only that the caller can see the project.
+    const existing = await getProject(app.db, id, viewer);
+    if (!existing) {
+      return reply.code(404).send({ error: 'not_found', message: 'No such project.' });
+    }
+
+    await setProjectFavorite(app.db, id, viewer.id, favorite);
+    return { project: await getProject(app.db, id, viewer) };
   });
 
   app.delete('/projects/:id', { preHandler: requireAdmin }, async (request, reply) => {

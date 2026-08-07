@@ -79,12 +79,6 @@ body {
   }
 }
 
-/* The project owner can't be removed, so hide the selection checkbox on its
- * row (the owner is also excluded from any bulk removal in code). */
-.atlas-actions-table table tr:has([data-atlas-owner]) .du_data_table_select_cell {
-  visibility: hidden;
-}
-
 /* Keep a DataTable within its container (e.g. a modal) and let long cell text
  * wrap instead of forcing the table wider than the dialog. Pair with
  * .atlas-actions-table to keep the trailing actions column compact and unwrapped. */
@@ -204,7 +198,7 @@ button.atlas-matrix-tile:hover {
 }
 
 .atlas-matrix-quadrant-card .du_stat_value {
-  font-size: var(--font-size-2);
+  font-size: var(--font-size-5);
 }
 
 .atlas-matrix-quadrant-card .du_stat:nth-child(odd) {
@@ -287,6 +281,18 @@ button.atlas-matrix-tile:hover {
 .atlas-main .du_data_table_scroll .du_table {
   inline-size: max-content;
   min-inline-size: 100%;
+}
+
+/* The scroll pane carries its own --border-width frame, and the collapsed table
+ * adds an outer cell border right beside it, so the left/right edges read as a
+ * doubled line. Drop the table's outer inline borders and let the pane's fixed
+ * border be the single left/right edge — the two "overlap" into one line. */
+.atlas-main .du_data_table_scroll .du_table tr > :first-child {
+  border-inline-start: 0;
+}
+
+.atlas-main .du_data_table_scroll .du_table tr > :last-child {
+  border-inline-end: 0;
 }
 
 /* Pinned above the scrolling content but below Duality overlays (--z-popover is 900). */
@@ -431,6 +437,36 @@ button.atlas-matrix-tile:hover {
 .atlas-card-link:focus-visible {
   outline: var(--border-width) solid var(--fg);
   outline-offset: 2px;
+}
+
+/* Make the whole project card clickable: the name's link stretches a covering
+ * pseudo-element over the card, so a click anywhere navigates. The favorite and
+ * action controls are raised above it (see .atlas-project-card__actions) so they
+ * still receive their own clicks. */
+.atlas-project-card {
+  position: relative;
+  cursor: pointer;
+}
+
+.atlas-card-link-stretch::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+/* Ring the whole card on keyboard focus rather than just the name text. */
+.atlas-card-link-stretch:focus-visible {
+  outline: none;
+}
+
+.atlas-card-link-stretch:focus-visible::after {
+  outline: var(--border-width) solid var(--fg);
+  outline-offset: 2px;
+}
+
+.atlas-project-card__actions {
+  position: relative;
+  z-index: 1;
 }
 
 /* A record card is the phone-layout replacement for one table row: a bordered

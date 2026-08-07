@@ -174,6 +174,24 @@ export const projectMembers = pgTable(
   ],
 );
 
+/**
+ * Per-user favorite projects. Favorites are private to each user and only
+ * affect that user's Projects-page ordering and quick filters.
+ */
+export const projectFavorites = pgTable(
+  'project_favorites',
+  {
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.projectId, t.userId] })],
+);
+
 /** Tags seeded into a new task created in a project (mirrors task_tags). */
 export const projectDefaultTags = pgTable(
   'project_default_tags',

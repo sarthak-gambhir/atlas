@@ -21,6 +21,10 @@ interface ProjectRowActionsProps {
   /** Admin only: may delete. */
   isAdmin: boolean;
   onEdit: () => void;
+  /** When provided, adds a "View" item that opens the project detail page. */
+  onView?: () => void;
+  /** When provided, adds a "Members" item that opens the manage-members modal. */
+  onManageMembers?: () => void;
   /** Called after a successful delete, e.g. to navigate away from a detail page. */
   onDeleted?: () => void;
 }
@@ -31,6 +35,8 @@ export function ProjectRowActions({
   canManage,
   isAdmin,
   onEdit,
+  onView,
+  onManageMembers,
   onDeleted,
 }: ProjectRowActionsProps) {
   const updateProject = useUpdateProject();
@@ -40,8 +46,8 @@ export function ProjectRowActions({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const archived = project.archivedAt != null;
 
-  // Nothing to offer when the viewer can neither manage nor delete.
-  if (!canManage && !isAdmin) return null;
+  // Nothing to offer when the viewer can neither view, manage nor delete.
+  if (!onView && !canManage && !isAdmin) return null;
 
   const count = project.totalTaskCount;
   const deleteDescription =
@@ -90,11 +96,23 @@ export function ProjectRowActions({
           </Button>
         }
       >
+        {onView ? (
+          <MenuItem onSelect={onView}>
+            <IconLabel icon={ACTION_ICONS.reveal}>View</IconLabel>
+          </MenuItem>
+        ) : null}
+
         {canManage ? (
           <>
+            {onView ? <MenuSeparator /> : null}
             <MenuItem onSelect={onEdit}>
               <IconLabel icon={ACTION_ICONS.edit}>Edit</IconLabel>
             </MenuItem>
+            {onManageMembers ? (
+              <MenuItem onSelect={onManageMembers}>
+                <IconLabel icon={ACTION_ICONS.members}>Members</IconLabel>
+              </MenuItem>
+            ) : null}
             <MenuItem onSelect={() => setArchived(!archived)}>
               <IconLabel icon={archived ? ACTION_ICONS.restore : ACTION_ICONS.archive}>
                 {archived ? 'Restore' : 'Archive'}
@@ -105,7 +123,7 @@ export function ProjectRowActions({
 
         {isAdmin ? (
           <>
-            {canManage ? <MenuSeparator /> : null}
+            {canManage || onView ? <MenuSeparator /> : null}
             <MenuItem onSelect={() => setConfirmingDelete(true)}>
               <IconLabel icon={ACTION_ICONS.delete}>Delete</IconLabel>
             </MenuItem>

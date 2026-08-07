@@ -14,6 +14,7 @@ import { MatrixQuadrantModal } from '../components/matrix/MatrixQuadrantModal.ts
 import { statsForQuadrant } from '../components/matrix/quadrantStats.ts';
 import { PageHeader } from '../components/PageHeader.tsx';
 import { useFilters } from '../lib/filters.ts';
+import { PAGE_ICONS } from '../lib/nav.ts';
 import { useTasks } from '../lib/tasks.ts';
 import { useIsMobile } from '../lib/useIsMobile.ts';
 
@@ -59,7 +60,7 @@ const isHighImpact = (task: TaskDto) => task.impact >= 3;
 const isLowEffort = (task: TaskDto) => task.effort <= 3;
 
 export function MatrixPage() {
-  const filters = useFilters();
+  const filters = useFilters({ includeClosed: true });
   const { data: tasks, isPending, error } = useTasks(filters.query);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -135,6 +136,7 @@ export function MatrixPage() {
     <Stack gap={4}>
       <PageHeader
         title="Matrix"
+        icon={PAGE_ICONS.matrix}
         description={
           isMobile
             ? 'Four impact/effort quadrants. Tap one to see its tasks.'

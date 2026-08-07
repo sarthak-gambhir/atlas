@@ -14,7 +14,7 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: readonly NavItem[] = [
-  { path: '/', label: 'Backlog', Icon: RiListCheck2 },
+  { path: '/', label: 'Tasks', Icon: RiListCheck2 },
   { path: '/board', label: 'Board', Icon: RiLayoutColumnLine },
   { path: '/matrix', label: 'Matrix', Icon: RiGridLine },
   { path: '/projects', label: 'Projects', Icon: RiFolderLine },

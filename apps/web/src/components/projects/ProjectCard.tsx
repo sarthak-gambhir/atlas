@@ -16,6 +16,7 @@ import { ProjectIcon } from '../../lib/projectIcons.tsx';
 import { useSession } from '../../lib/session.ts';
 import { ProjectRowActions } from './ProjectRowActions.tsx';
 import { ICON_SIZES } from '../../lib/icons.ts';
+import { TagBadge } from '../TagBadge.tsx';
 
 interface ProjectCardProps {
   project: ProjectDto;
@@ -65,9 +66,7 @@ export function ProjectCard({ project, isAdmin, onEdit }: ProjectCardProps) {
           {project.defaults.tags.length > 0 ? (
             <Inline gap={1} wrap>
               {project.defaults.tags.map((tag) => (
-                <Badge key={tag} variant="outline" size="sm">
-                  {tag}
-                </Badge>
+                <TagBadge key={tag} tag={tag} />
               ))}
             </Inline>
           ) : null}

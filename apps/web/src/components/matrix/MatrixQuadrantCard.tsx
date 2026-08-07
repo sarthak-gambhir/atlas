@@ -10,9 +10,9 @@ import {
 
 export interface QuadrantStats {
   count: number;
-  minScore: number | '—';
   maxScore: number | '—';
   activeCount: number;
+  closedCount: number;
 }
 
 interface MatrixQuadrantCardProps {
@@ -41,7 +41,7 @@ export function MatrixQuadrantCard({ label, description, stats, onClick }: Matri
           <Stat label="Tasks" value={stats.count} />
           <Stat label="Active" value={stats.activeCount} />
           <Stat label="Max score" value={stats.maxScore} />
-          <Stat label="Min score" value={stats.minScore} />
+          <Stat label="Closed" value={stats.closedCount} />
         </Grid>
       </CardBody>
 

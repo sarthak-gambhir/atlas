@@ -78,7 +78,20 @@ describe('GET /api/export', () => {
 
     expect(bundle.version).toBe(1);
     expect(bundle.projects).toEqual([
-      { name: 'Website', description: 'The marketing site', archived: false },
+      {
+        name: 'Website',
+        description: 'The marketing site',
+        archived: false,
+        icon: null,
+        // The creator is the project's owner and its first (editor) member.
+        owner: 'ada',
+        members: [{ username: 'ada', role: 'editor' }],
+        defaultAssignee: null,
+        defaultImpact: null,
+        defaultEffort: null,
+        defaultConfidence: null,
+        defaultTags: [],
+      },
     ]);
 
     const shipped = bundle.tasks.find((task) => task.title === 'Ship the landing page');

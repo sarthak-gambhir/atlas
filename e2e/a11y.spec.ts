@@ -31,7 +31,7 @@ for (const route of routes) {
 
 test('keyboard: skip link jumps to main content', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Backlog', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Tasks', exact: true })).toBeVisible();
 
   await page.keyboard.press('Tab');
   const skip = page.getByRole('link', { name: 'Skip to content' });

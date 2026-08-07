@@ -16,6 +16,7 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { BucketBadge } from '../components/BucketBadge.tsx';
 import { IconLabel } from '../components/IconLabel.tsx';
 import { StatusBadge } from '../components/StatusBadge.tsx';
+import { TagBadge } from '../components/TagBadge.tsx';
 import { TaskModal } from '../components/TaskModal.tsx';
 import { dueLabel } from '../lib/dates.ts';
 import { ACTION_ICONS } from '../lib/icons.ts';
@@ -36,7 +37,7 @@ export function TaskDetailPage() {
     <Link to="/" className="atlas-card-link">
       <Inline gap={1} align="center">
         <Icon icon={ACTION_ICONS.back} />
-        <Text size="sm">Backlog</Text>
+        <Text size="sm">Tasks</Text>
       </Inline>
     </Link>
   );
@@ -143,9 +144,7 @@ export function TaskDetailPage() {
           {task.tags.length > 0 ? (
             <Inline gap={1} wrap>
               {task.tags.map((tag) => (
-                <Badge key={tag} variant="outline" size="sm">
-                  {tag}
-                </Badge>
+                <TagBadge key={tag} tag={tag} />
               ))}
             </Inline>
           ) : (

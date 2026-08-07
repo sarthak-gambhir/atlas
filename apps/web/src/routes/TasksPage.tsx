@@ -9,7 +9,7 @@ import { ACTION_ICONS } from '../lib/icons.ts';
 import { useQuickAdd } from '../lib/quick-add.ts';
 import { useTasks } from '../lib/tasks.ts';
 
-export function BacklogPage() {
+export function TasksPage() {
   const filters = useFilters();
   const openQuickAdd = useQuickAdd();
   const { data: tasks } = useTasks(filters.query);
@@ -17,7 +17,7 @@ export function BacklogPage() {
   return (
     <Stack gap={4}>
       <PageHeader
-        title="Backlog"
+        title="Tasks"
         count={tasks?.length}
         actions={
           <Inline gap={2} align="center">
@@ -36,7 +36,7 @@ export function BacklogPage() {
 
       <TaskTable
         query={filters.query}
-        ariaLabel="Ranked backlog"
+        ariaLabel="Ranked tasks"
         emptyState={
           <EmptyState
             icon={

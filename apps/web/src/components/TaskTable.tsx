@@ -22,6 +22,7 @@ import { BulkActionBar } from './BulkActionBar.tsx';
 import { IconLabel } from './IconLabel.tsx';
 import { ScoreCell } from './ScoreCell.tsx';
 import { StatusBadge } from './StatusBadge.tsx';
+import { TagBadge } from './TagBadge.tsx';
 import { dueLabel } from '../lib/dates.ts';
 import { ACTION_ICONS } from '../lib/icons.ts';
 import { useCompleteTask, useTasks, useUpdateTask } from '../lib/tasks.ts';
@@ -165,9 +166,7 @@ export function TaskTable({
             {task.tags.length > 0 ? (
               <Inline gap={1}>
                 {task.tags.map((tag) => (
-                  <Badge key={tag} variant="outline" size="sm">
-                    {tag}
-                  </Badge>
+                  <TagBadge key={tag} tag={tag} />
                 ))}
               </Inline>
             ) : null}
@@ -468,9 +467,7 @@ function TaskCardList({
                   <Inline gap={1} wrap>
                     <Text size="sm">Tags:</Text>
                     {task.tags.map((tag) => (
-                      <Badge key={tag} variant="outline" size="sm">
-                        {tag}
-                      </Badge>
+                      <TagBadge key={tag} tag={tag} />
                     ))}
                   </Inline>
                 </div>

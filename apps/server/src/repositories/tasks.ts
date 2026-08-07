@@ -1,7 +1,7 @@
 import {
   CLOSED_STATUSES,
   bucketFor,
-  compareForBacklog,
+  compareTasksByRank,
   computeScore,
   toIsoDate,
   type BulkUpdateInput,
@@ -169,7 +169,7 @@ export async function listTasks(
 
   return rows
     .map((row) => toDto(row, tagsByTask.get(row.id) ?? [], ctx))
-    .sort((a, b) => compareForBacklog(a, b, ctx.settings, ctx.today));
+    .sort((a, b) => compareTasksByRank(a, b, ctx.settings, ctx.today));
 }
 
 export async function getTask(

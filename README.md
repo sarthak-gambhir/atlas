@@ -67,7 +67,7 @@ The API listens on <http://localhost:8787> and the web client on
 
 | Where    | What it shows                                                      |
 | -------- | ------------------------------------------------------------------ |
-| Backlog  | Every open task in score order, with multi-select for bulk edits   |
+| Tasks    | Every open task in score order, with multi-select for bulk edits   |
 | Board    | The same tasks in columns by status                                |
 | Matrix   | An impact against effort grid, to spot the cheap wins              |
 | Projects | Project list with open counts, plus archive and restore            |

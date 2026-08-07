@@ -1,5 +1,4 @@
 import {
-  Badge,
   Button,
   Card,
   CardBody,
@@ -25,24 +24,20 @@ interface BoardBucketProps {
 /** A glanceable summary of one board column: count and score range. */
 export function BoardBucket({ status, tasks, onViewAll }: BoardBucketProps) {
   const count = tasks.length;
-  // Tasks arrive sorted by score descending, so the ends are the extremes.
+  // Tasks arrive sorted by score descending, so the first is the highest.
   const max = count > 0 ? tasks[0]!.score : null;
-  const min = count > 0 ? tasks[count - 1]!.score : null;
 
   return (
     <Card>
       <CardBody>
         <Stack gap={3}>
-          <Inline gap={2} align="center" justify="between">
-            <Inline gap={2} align="center" wrap={false}>
-              <Icon size={ICON_SIZES.lg} icon={STATUS_ICONS[status]} />
-              <Text weight="bold">{STATUS_LABELS[status]}</Text>
-            </Inline>
-            <Badge variant="outline">{count}</Badge>
+          <Inline gap={2} align="center" wrap={false}>
+            <Icon size={ICON_SIZES.lg} icon={STATUS_ICONS[status]} />
+            <Text weight="bold">{STATUS_LABELS[status]}</Text>
           </Inline>
 
           <StatGroup>
-            <Stat label="Min score" value={min ?? '—'} />
+            <Stat label="Tasks" value={count} />
             <Stat label="Max score" value={max ?? '—'} />
           </StatGroup>
 

@@ -12,9 +12,10 @@ export default defineConfig({
   test: {
     include: ['packages/**/src/**/*.test.ts', 'apps/**/src/**/*.test.{ts,tsx}'],
     environment: 'node',
-    // Node 24's child_process fork workers (Vitest's default "forks" pool) fail
-    // to initialize the worker runtime here, so `describe` throws "Cannot read
-    // properties of undefined (reading 'config')". Worker threads work reliably.
+    // Worker threads initialize the runtime reliably here; the default "forks"
+    // pool has been flaky on Node 24. Tests are launched via scripts/vitest.mjs,
+    // which normalizes the cwd drive-letter casing so the worker runtime loads as
+    // a single module instance (that file explains why this matters on Windows).
     pool: 'threads',
     // The API suites share one Postgres database and truncate between cases, so
     // running files concurrently would let them wipe each other's fixtures.

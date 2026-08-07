@@ -4,7 +4,7 @@ import { BrowserRouter, Route, Routes } from 'react-router';
 
 import { AppShell } from './components/AppShell.tsx';
 import { RequireAuth } from './components/RequireAuth.tsx';
-import { BacklogPage } from './routes/BacklogPage.tsx';
+import { TasksPage } from './routes/TasksPage.tsx';
 import { BoardPage } from './routes/BoardPage.tsx';
 import { LoginPage } from './routes/LoginPage.tsx';
 import { MatrixPage } from './routes/MatrixPage.tsx';
@@ -36,7 +36,7 @@ export function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route element={<RequireAuth />}>
                 <Route element={<AppShell />}>
-                  <Route index element={<BacklogPage />} />
+                  <Route index element={<TasksPage />} />
                   <Route path="tasks/:id" element={<TaskDetailPage />} />
                   <Route path="board" element={<BoardPage />} />
                   <Route path="matrix" element={<MatrixPage />} />

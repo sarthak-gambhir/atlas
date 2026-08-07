@@ -269,6 +269,8 @@ describe('POST /api/tasks/bulk', () => {
   interface BulkResult {
     updated: number;
     ids: string[];
+    skipped: number;
+    reasons: string[];
   }
 
   function bulk(payload: Record<string, unknown>) {
@@ -359,7 +361,13 @@ describe('POST /api/tasks/bulk', () => {
 
     const response = await bulk({ ids: [task.id, ghost], patch: { status: 'blocked' } });
 
-    expect(response.json<BulkResult>()).toEqual({ updated: 1, ids: [task.id] });
+    // The ghost id matches no task, so it is counted as skipped with no reason.
+    expect(response.json<BulkResult>()).toEqual({
+      updated: 1,
+      ids: [task.id],
+      skipped: 1,
+      reasons: [],
+    });
   });
 
   it('rejects an empty patch', async () => {
@@ -384,16 +392,18 @@ describe('POST /api/tasks/bulk', () => {
     expect(response.statusCode).toBe(400);
   });
 
-  it('refuses a project that does not exist', async () => {
+  it('refuses a project the caller may not edit', async () => {
     const task = await createTask({ title: 'Homeless' });
 
+    // A member cannot tell a missing project apart from one they simply do not
+    // belong to, so moving tasks into it is forbidden rather than a 400.
     const response = await bulk({
       ids: [task.id],
       patch: { projectId: '22222222-2222-4222-8222-222222222222' },
     });
 
-    expect(response.statusCode).toBe(400);
-    expect(response.json<ApiErrorBody>().error).toBe('invalid_reference');
+    expect(response.statusCode).toBe(403);
+    expect(response.json<ApiErrorBody>().error).toBe('forbidden');
   });
 
   it('refuses anonymous access', async () => {

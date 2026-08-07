@@ -8,7 +8,7 @@ import { test, expect, type Page, type TestInfo } from '@playwright/test';
  * route's data has loaded before the shutter fires.
  */
 const routes = [
-  { path: '/', name: 'backlog', heading: 'Backlog', ready: 'Fix checkout crash on Safari' },
+  { path: '/', name: 'backlog', heading: 'Tasks', ready: 'Fix checkout crash on Safari' },
   // The board groups tasks into summary columns instead of listing them, so a
   // column heading is what proves its query settled.
   { path: '/board', name: 'board', heading: 'Board', ready: 'In progress' },

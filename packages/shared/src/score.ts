@@ -172,11 +172,11 @@ export interface RankableTask extends ScoreInputs {
 }
 
 /**
- * Ordering for the backlog: pinned tasks first in their pinned order, then by
+ * Ordering for the task list: pinned tasks first in their pinned order, then by
  * score, then by which is due soonest, then oldest first so the order is total
  * and stable.
  */
-export function compareForBacklog(
+export function compareTasksByRank(
   a: RankableTask,
   b: RankableTask,
   settings: ScoringSettings = DEFAULT_SCORING,

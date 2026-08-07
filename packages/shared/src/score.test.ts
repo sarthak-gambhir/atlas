@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_SCORING,
   bucketFor,
-  compareForBacklog,
+  compareTasksByRank,
   computeScore,
   daysBetween,
   relevantDue,
@@ -220,9 +220,9 @@ describe('bucketFor', () => {
   });
 });
 
-describe('compareForBacklog', () => {
+describe('compareTasksByRank', () => {
   const sorted = (tasks: RankableTask[]) =>
-    [...tasks].sort((a, b) => compareForBacklog(a, b, DEFAULT_SCORING, TODAY)).map((t) => t.id);
+    [...tasks].sort((a, b) => compareTasksByRank(a, b, DEFAULT_SCORING, TODAY)).map((t) => t.id);
 
   it('ranks higher scores first', () => {
     const high = rankable('high', { impact: 5, effort: 1 });

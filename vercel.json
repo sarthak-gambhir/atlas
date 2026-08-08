@@ -26,5 +26,6 @@
         { "key": "x-frame-options", "value": "DENY" }
       ]
     }
-  ]
+  ],
+  "regions": ["cle1"]
 }

@@ -23,13 +23,15 @@ import { BackLink } from '../components/BackLink.tsx';
 import { BucketBadge } from '../components/BucketBadge.tsx';
 import { IconLabel } from '../components/IconLabel.tsx';
 import { StatusBadge } from '../components/StatusBadge.tsx';
+import { SubtaskList } from '../components/SubtaskList.tsx';
 import { TagBadge } from '../components/TagBadge.tsx';
 import { TaskModal } from '../components/TaskModal.tsx';
 import { dueLabel, todayIso } from '../lib/dates.ts';
 import { ACTION_ICONS } from '../lib/icons.ts';
 import { CONFIDENCE_LABELS } from '../lib/labels.ts';
-import { useProjects, useUsers } from '../lib/organization.ts';
+import { canEditProject, useProjects, useUsers } from '../lib/organization.ts';
 import { ProjectIcon } from '../lib/projectIcons.tsx';
+import { useSession } from '../lib/session.ts';
 import { useTask } from '../lib/tasks.ts';
 
 export function TaskDetailPage() {
@@ -38,6 +40,7 @@ export function TaskDetailPage() {
   // Include archived so an archived project's name still resolves here.
   const { data: projects } = useProjects(true);
   const { data: users } = useUsers();
+  const { data: session } = useSession();
   const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
 
@@ -64,6 +67,13 @@ export function TaskDetailPage() {
   const project = task.projectId ? projects?.find((p) => p.id === task.projectId) : undefined;
   const assignee = task.assigneeId ? users?.find((u) => u.id === task.assigneeId) : undefined;
   const dates = dueLabel(task);
+
+  // Subtasks follow the same edit rules as the task: locked while archived or
+  // when the viewer only has view-only access to the project.
+  const subtasksLocked =
+    task.status === 'archived' ||
+    project?.archivedAt != null ||
+    (project != null && !canEditProject(project, session));
 
   // Mirror computeScore: closed tasks freeze urgency at their completion date, so
   // the stat matches the urgency that produced the (possibly frozen) score.
@@ -185,6 +195,12 @@ export function TaskDetailPage() {
           ) : (
             <Text size="sm">No notes yet.</Text>
           )}
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardBody>
+          <SubtaskList taskId={task.id} subtasks={task.subtasks} disabled={subtasksLocked} />
         </CardBody>
       </Card>
 

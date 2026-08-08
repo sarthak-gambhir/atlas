@@ -37,6 +37,7 @@ import { Fragment, useState, type FormEvent, type ReactNode } from 'react';
 import { useSaveScoring } from '../lib/admin.ts';
 import { AccountPanel } from '../components/account/AccountPanel.tsx';
 import { AppearancePanel } from '../components/appearance/AppearancePanel.tsx';
+import { AuditLogPanel } from '../components/audit/AuditLogPanel.tsx';
 import { BucketBadge } from '../components/BucketBadge.tsx';
 import { DataPanel } from '../components/data/DataPanel.tsx';
 import { PageHeader } from '../components/PageHeader.tsx';
@@ -65,6 +66,7 @@ export function SettingsPage() {
               <Tab value="account">Account</Tab>
               {isAdmin ? <Tab value="people">People</Tab> : null}
               {isAdmin ? <Tab value="data">Data</Tab> : null}
+              {isAdmin ? <Tab value="audit">Audit log</Tab> : null}
             </TabList>
 
             <TabPanel value="scoring">
@@ -84,6 +86,11 @@ export function SettingsPage() {
             {isAdmin ? (
               <TabPanel value="data">
                 <DataPanel />
+              </TabPanel>
+            ) : null}
+            {isAdmin ? (
+              <TabPanel value="audit">
+                <AuditLogPanel />
               </TabPanel>
             ) : null}
           </Tabs>

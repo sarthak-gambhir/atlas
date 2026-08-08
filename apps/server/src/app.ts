@@ -6,6 +6,7 @@ import { attachUser } from './auth/context.ts';
 import { getDatabase, type Database } from './db/index.ts';
 import { loadEnv, type Env } from './env.ts';
 import { PG_FOREIGN_KEY_VIOLATION, PG_UNIQUE_VIOLATION, postgresErrorCode } from './errors.ts';
+import { auditRoutes } from './routes/audit.ts';
 import { authRoutes } from './routes/auth.ts';
 import { cronRoutes } from './routes/cron.ts';
 import { dataRoutes } from './routes/data.ts';
@@ -107,6 +108,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       await api.register(userRoutes);
       await api.register(settingsRoutes);
       await api.register(dataRoutes);
+      await api.register(auditRoutes);
     },
     { prefix: '/api' },
   );

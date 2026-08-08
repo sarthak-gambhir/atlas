@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { requireAdmin, requireAuth } from '../auth/context.ts';
 import { hashPassword } from '../auth/password.ts';
 import { revokeAllSessionsForUser } from '../auth/sessions.ts';
+import { recordAudit } from '../repositories/audit.ts';
 import {
   countActiveAdmins,
   createUser,
@@ -52,6 +53,15 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
       displayName: input.displayName,
       passwordHash: await hashPassword(input.password),
       role: input.role ?? 'member',
+    });
+
+    await recordAudit(app.db, {
+      actor: { id: request.user!.id, username: request.user!.username },
+      action: 'user.create',
+      entityType: 'user',
+      entityId: user.id,
+      targetUsername: user.username,
+      metadata: { username: user.username, role: user.role },
     });
 
     return reply.code(201).send({ user: toSummary(user) });
@@ -110,6 +120,20 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
       await revokeAllSessionsForUser(app.db, id);
     }
 
+    await recordAudit(app.db, {
+      actor: { id: request.user!.id, username: request.user!.username },
+      action:
+        input.password !== undefined
+          ? 'user.password_reset'
+          : input.disabled === true
+            ? 'user.disable'
+            : 'user.update',
+      entityType: 'user',
+      entityId: updated.id,
+      targetUsername: updated.username,
+      metadata: { fields: Object.keys(input) },
+    });
+
     return { user: toSummary(updated) };
   });
 
@@ -133,6 +157,14 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
     }
 
     await deleteUser(app.db, id, request.user!.id);
+    await recordAudit(app.db, {
+      actor: { id: request.user!.id, username: request.user!.username },
+      action: 'user.delete',
+      entityType: 'user',
+      entityId: id,
+      targetUsername: target.username,
+      metadata: { username: target.username },
+    });
     return { ok: true as const };
   });
 };

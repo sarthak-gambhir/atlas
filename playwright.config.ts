@@ -46,9 +46,24 @@ export default defineConfig({
   },
 
   // The plan calls for a desktop and a laptop viewport; one spec runs under both.
+  // The mobile suite is phone-specific, so the desktop viewports skip it and it
+  // gets a dedicated project at a ~390px width.
   projects: [
-    { name: 'desktop-1440', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } },
-    { name: 'laptop-1024', use: { ...devices['Desktop Chrome'], viewport: { width: 1024, height: 768 } } },
+    {
+      name: 'desktop-1440',
+      testIgnore: /mobile\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
+    },
+    {
+      name: 'laptop-1024',
+      testIgnore: /mobile\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1024, height: 768 } },
+    },
+    {
+      name: 'mobile-390',
+      testMatch: /mobile\.spec\.ts/,
+      use: { ...devices['Pixel 5'], channel: 'chrome' },
+    },
   ],
 
   webServer: [

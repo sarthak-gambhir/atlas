@@ -2,9 +2,11 @@ import {
   Button,
   Code,
   Divider,
+  FormField,
   Heading,
   Icon,
   Inline,
+  MultiSelect,
   Stack,
   Stat,
   StatGroup,
@@ -32,10 +34,16 @@ export function DataPanel() {
   const { data: users } = useUsers();
 
   const [savedAs, setSavedAs] = useState<string | null>(null);
+  const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
+
+  const projectOptions = (projects ?? []).map((project) => ({
+    value: project.id,
+    label: project.archivedAt ? `${project.name} (archived)` : project.name,
+  }));
 
   const onExport = () => {
     const filename = `atlas-${new Date().toISOString().slice(0, 10)}.json`;
-    void downloadBackup()
+    void downloadBackup(selectedProjectIds)
       .then(() => setSavedAs(filename))
       .catch((cause: unknown) =>
         toast({
@@ -68,6 +76,18 @@ export function DataPanel() {
             database. Passwords are never included.
           </Text>
         </Stack>
+
+        <FormField
+          label="Projects to export"
+          hint="Leave empty to export everything. Selecting projects limits the export to them and their tasks."
+        >
+          <MultiSelect
+            options={projectOptions}
+            value={selectedProjectIds}
+            onValueChange={setSelectedProjectIds}
+            placeholder="All projects"
+          />
+        </FormField>
 
         <Inline gap={3} align="center">
           <Button className="atlas-button" variant="solid" size="md" onClick={onExport}>

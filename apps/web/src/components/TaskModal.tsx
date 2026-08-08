@@ -33,6 +33,7 @@ import { useState } from 'react';
 
 import { BucketBadge } from './BucketBadge.tsx';
 import { IconLabel } from './IconLabel.tsx';
+import { SubtaskList } from './SubtaskList.tsx';
 import { formatIsoDate, parseIsoDate, todayIso } from '../lib/dates.ts';
 import { ACTION_ICONS } from '../lib/icons.ts';
 import { CONFIDENCE_LABELS, STATUS_LABELS, URGENCY_OPTIONS } from '../lib/labels.ts';
@@ -362,6 +363,8 @@ export function TaskModal({ task, onClose, onDeleted }: TaskModalProps) {
               placeholder="Add a tag"
             />
           </FormField>
+
+          <SubtaskList taskId={task.id} subtasks={task.subtasks} disabled={locked} />
 
           <Text size="sm">
             Created {new Date(task.createdAt).toLocaleDateString()}

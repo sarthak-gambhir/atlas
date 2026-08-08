@@ -6,6 +6,7 @@ import {
   date,
   doublePrecision,
   index,
+  integer,
   jsonb,
   pgEnum,
   pgTable,
@@ -129,6 +130,27 @@ export const tasks = pgTable(
   ],
 );
 
+/**
+ * A flat checklist under a task: just a description, an order and a done flag.
+ * Deliberately minimal (no assignee, dates or scoring); deleted with the task.
+ */
+export const subtasks = pgTable(
+  'subtasks',
+  {
+    id: uuid('id').primaryKey(),
+    taskId: uuid('task_id')
+      .notNull()
+      .references(() => tasks.id, { onDelete: 'cascade' }),
+    description: text('description').notNull(),
+    /** Order within the parent task; rendered ascending. */
+    position: integer('position').notNull(),
+    done: boolean('done').notNull().default(false),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index('subtasks_task_idx').on(t.taskId, t.position)],
+);
+
 export const tags = pgTable(
   'tags',
   {
@@ -224,4 +246,31 @@ export const loginAttempts = pgTable(
     succeeded: boolean('succeeded').notNull(),
   },
   (t) => [index('login_attempts_idx').on(sql`lower(${t.username})`, t.attemptedAt.desc())],
+);
+
+/**
+ * An append-only trail of who changed what. `actorUsername` is snapshotted so a
+ * row still reads sensibly after the user is deleted (the FK then nulls). The
+ * entity/project ids are plain columns, not foreign keys, so deleting the thing
+ * an entry describes never removes its own audit record. Demo accounts and
+ * demo-owned projects are filtered out before insert (see audit/exclude.ts).
+ */
+export const auditLogs = pgTable(
+  'audit_logs',
+  {
+    id: uuid('id').primaryKey(),
+    actorUserId: uuid('actor_user_id').references(() => users.id, { onDelete: 'set null' }),
+    actorUsername: text('actor_username').notNull(),
+    action: text('action').notNull(),
+    entityType: text('entity_type').notNull(),
+    entityId: uuid('entity_id'),
+    projectId: uuid('project_id'),
+    metadata: jsonb('metadata'),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('audit_logs_created_idx').on(t.createdAt.desc()),
+    index('audit_logs_action_idx').on(t.action),
+    index('audit_logs_project_idx').on(t.projectId),
+  ],
 );

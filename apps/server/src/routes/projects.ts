@@ -7,7 +7,9 @@ import {
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 
+import { isDemoProject } from '../audit/exclude.ts';
 import { requireAdmin, requireAuth } from '../auth/context.ts';
+import { recordAudit } from '../repositories/audit.ts';
 import {
   addProjectMember,
   createProject,
@@ -84,7 +86,16 @@ export const organizationRoutes: FastifyPluginAsync = async (app) => {
       });
     }
 
-    return reply.code(201).send({ project: await createProject(app.db, input, request.user!.id) });
+    const project = await createProject(app.db, input, request.user!.id);
+    await recordAudit(app.db, {
+      actor: { id: request.user!.id, username: request.user!.username },
+      action: 'project.create',
+      entityType: 'project',
+      entityId: project.id,
+      projectId: project.id,
+      metadata: { name: project.name },
+    });
+    return reply.code(201).send({ project });
   });
 
   app.patch('/projects/:id', async (request, reply) => {
@@ -105,6 +116,19 @@ export const organizationRoutes: FastifyPluginAsync = async (app) => {
 
     const project = await updateProject(app.db, id, input);
     if (!project) return reply.code(404).send({ error: 'not_found', message: 'No such project.' });
+    await recordAudit(app.db, {
+      actor: { id: request.user!.id, username: request.user!.username },
+      action:
+        input.archived === true
+          ? 'project.archive'
+          : input.archived === false
+            ? 'project.restore'
+            : 'project.update',
+      entityType: 'project',
+      entityId: id,
+      projectId: id,
+      metadata: { fields: Object.keys(input) },
+    });
     return { project };
   });
 
@@ -120,6 +144,14 @@ export const organizationRoutes: FastifyPluginAsync = async (app) => {
 
     const project = await addProjectMember(app.db, id, userId, role);
     if (!project) return reply.code(404).send({ error: 'not_found', message: 'No such project.' });
+    await recordAudit(app.db, {
+      actor: { id: request.user!.id, username: request.user!.username },
+      action: 'project.member.add',
+      entityType: 'project',
+      entityId: userId,
+      projectId: id,
+      metadata: { userId, role: role ?? 'editor' },
+    });
     return { project };
   });
 
@@ -146,6 +178,14 @@ export const organizationRoutes: FastifyPluginAsync = async (app) => {
     if (!project) {
       return reply.code(404).send({ error: 'not_found', message: 'No such project member.' });
     }
+    await recordAudit(app.db, {
+      actor: { id: request.user!.id, username: request.user!.username },
+      action: 'project.member.role',
+      entityType: 'project',
+      entityId: userId,
+      projectId: id,
+      metadata: { userId, role },
+    });
     return { project };
   });
 
@@ -161,6 +201,14 @@ export const organizationRoutes: FastifyPluginAsync = async (app) => {
 
     const project = await transferProjectOwnership(app.db, id, userId);
     if (!project) return reply.code(404).send({ error: 'not_found', message: 'No such project.' });
+    await recordAudit(app.db, {
+      actor: { id: request.user!.id, username: request.user!.username },
+      action: 'project.owner.transfer',
+      entityType: 'project',
+      entityId: id,
+      projectId: id,
+      metadata: { newOwnerId: userId },
+    });
     return { project };
   });
 
@@ -184,6 +232,14 @@ export const organizationRoutes: FastifyPluginAsync = async (app) => {
 
     const project = await removeProjectMember(app.db, id, userId);
     if (!project) return reply.code(404).send({ error: 'not_found', message: 'No such project.' });
+    await recordAudit(app.db, {
+      actor: { id: request.user!.id, username: request.user!.username },
+      action: 'project.member.remove',
+      entityType: 'project',
+      entityId: userId,
+      projectId: id,
+      metadata: { userId },
+    });
     return { project };
   });
 
@@ -205,8 +261,22 @@ export const organizationRoutes: FastifyPluginAsync = async (app) => {
   app.delete('/projects/:id', { preHandler: requireAdmin }, async (request, reply) => {
     const { id } = idParamsSchema.parse(request.params);
 
+    // Resolve demo-ownership before the row is gone, so the audit exclusion can
+    // still see it (a post-delete lookup would find nothing and log it).
+    const demo = await isDemoProject(app.db, id);
+
     const removed = await deleteProject(app.db, id);
     if (!removed) return reply.code(404).send({ error: 'not_found', message: 'No such project.' });
+    if (!demo) {
+      await recordAudit(app.db, {
+        actor: { id: request.user!.id, username: request.user!.username },
+        action: 'project.delete',
+        entityType: 'project',
+        entityId: id,
+        projectId: id,
+        metadata: {},
+      });
+    }
     return reply.code(204).send();
   });
 

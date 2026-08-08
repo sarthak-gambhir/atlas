@@ -50,6 +50,13 @@
       "when": 1786116213063,
       "tag": "0006_third_sauron",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1786192160453,
+      "tag": "0007_aberrant_polaris",
+      "breakpoints": true
     }
   ]
 }

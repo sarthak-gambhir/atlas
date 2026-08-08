@@ -4,18 +4,21 @@ import {
   computeScore,
   toIsoDate,
   type BulkUpdateInput,
+  type CreateSubtaskInput,
   type CreateTaskInput,
   type ScoringSettings,
+  type SubtaskDto,
   type TaskDto,
   type TaskFilter,
   type TaskStatus,
+  type UpdateSubtaskInput,
   type UpdateTaskInput,
   type UserRole,
 } from '@atlas/shared';
-import { and, eq, exists, inArray, isNull, lte, notInArray, sql, type SQL } from 'drizzle-orm';
+import { and, eq, exists, inArray, isNull, lte, max, notInArray, sql, type SQL } from 'drizzle-orm';
 
 import type { Database } from '../db/index.ts';
-import { projectMembers, projects, tags, taskTags, tasks } from '../db/schema.ts';
+import { projectMembers, projects, subtasks, tags, taskTags, tasks } from '../db/schema.ts';
 
 type TaskRow = typeof tasks.$inferSelect;
 type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0];
@@ -36,7 +39,12 @@ export function scoringContext(settings: ScoringSettings): ScoringContext {
   return { settings, today: toIsoDate(new Date()) };
 }
 
-function toDto(row: TaskRow, tagNames: string[], ctx: ScoringContext): TaskDto {
+function toDto(
+  row: TaskRow,
+  tagNames: string[],
+  subtaskList: SubtaskDto[],
+  ctx: ScoringContext,
+): TaskDto {
   const inputs = {
     impact: row.impact,
     effort: row.effort,
@@ -64,11 +72,24 @@ function toDto(row: TaskRow, tagNames: string[], ctx: ScoringContext): TaskDto {
     dueEndDate: row.dueEndDate,
     manualRank: row.manualRank,
     tags: tagNames,
+    subtasks: subtaskList,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     completedAt: row.completedAt?.toISOString() ?? null,
     score,
     bucket: bucketFor(score, ctx.settings.thresholds),
+  };
+}
+
+type SubtaskRow = typeof subtasks.$inferSelect;
+
+function toSubtaskDto(row: SubtaskRow): SubtaskDto {
+  return {
+    id: row.id,
+    taskId: row.taskId,
+    description: row.description,
+    done: row.done,
+    position: row.position,
   };
 }
 
@@ -88,6 +109,30 @@ async function loadTagsByTask(db: Database, taskIds: string[]): Promise<Map<stri
     const existing = byTask.get(row.taskId);
     if (existing) existing.push(row.name);
     else byTask.set(row.taskId, [row.name]);
+  }
+
+  return byTask;
+}
+
+/** Subtasks for a set of tasks, ordered by position, grouped by parent task. */
+async function loadSubtasksByTask(
+  db: Database,
+  taskIds: string[],
+): Promise<Map<string, SubtaskDto[]>> {
+  const byTask = new Map<string, SubtaskDto[]>();
+  if (taskIds.length === 0) return byTask;
+
+  const rows = await db
+    .select()
+    .from(subtasks)
+    .where(inArray(subtasks.taskId, taskIds))
+    .orderBy(subtasks.position, subtasks.createdAt);
+
+  for (const row of rows) {
+    const dto = toSubtaskDto(row);
+    const existing = byTask.get(row.taskId);
+    if (existing) existing.push(dto);
+    else byTask.set(row.taskId, [dto]);
   }
 
   return byTask;
@@ -172,12 +217,15 @@ export async function listTasks(
     .from(tasks)
     .where(conditions.length > 0 ? and(...conditions) : undefined);
 
-  const tagsByTask = await loadTagsByTask(
-    db,
-    rows.map((row) => row.id),
-  );
+  const ids = rows.map((row) => row.id);
+  const [tagsByTask, subtasksByTask] = await Promise.all([
+    loadTagsByTask(db, ids),
+    loadSubtasksByTask(db, ids),
+  ]);
 
-  let dtos = rows.map((row) => toDto(row, tagsByTask.get(row.id) ?? [], ctx));
+  let dtos = rows.map((row) =>
+    toDto(row, tagsByTask.get(row.id) ?? [], subtasksByTask.get(row.id) ?? [], ctx),
+  );
 
   // Buckets are derived from the (unstored) score, so this narrows in memory
   // after scoring rather than in SQL.
@@ -197,8 +245,11 @@ export async function getTask(
   const [row] = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
   if (!row) return undefined;
 
-  const tagsByTask = await loadTagsByTask(db, [row.id]);
-  return toDto(row, tagsByTask.get(row.id) ?? [], ctx);
+  const [tagsByTask, subtasksByTask] = await Promise.all([
+    loadTagsByTask(db, [row.id]),
+    loadSubtasksByTask(db, [row.id]),
+  ]);
+  return toDto(row, tagsByTask.get(row.id) ?? [], subtasksByTask.get(row.id) ?? [], ctx);
 }
 
 /** Dedupes case-insensitively and creates any tag that does not exist yet. */
@@ -480,4 +531,69 @@ export async function reorderTasks(db: Database, orderedIds: string[]): Promise<
 
 export async function unpinTask(db: Database, id: string): Promise<void> {
   await db.update(tasks).set({ manualRank: null, updatedAt: new Date() }).where(eq(tasks.id, id));
+}
+
+/** The parent task id of a subtask, or undefined if it does not exist. */
+export async function findSubtaskParent(db: Database, id: string): Promise<string | undefined> {
+  const [row] = await db
+    .select({ taskId: subtasks.taskId })
+    .from(subtasks)
+    .where(eq(subtasks.id, id))
+    .limit(1);
+  return row?.taskId;
+}
+
+export async function listSubtasks(db: Database, taskId: string): Promise<SubtaskDto[]> {
+  const rows = await db
+    .select()
+    .from(subtasks)
+    .where(eq(subtasks.taskId, taskId))
+    .orderBy(subtasks.position, subtasks.createdAt);
+  return rows.map(toSubtaskDto);
+}
+
+/** Appends a subtask after the last one, so new items land at the bottom. */
+export async function createSubtask(
+  db: Database,
+  taskId: string,
+  input: CreateSubtaskInput,
+): Promise<SubtaskDto> {
+  const id = crypto.randomUUID();
+
+  const [{ value: highest } = { value: null }] = await db
+    .select({ value: max(subtasks.position) })
+    .from(subtasks)
+    .where(eq(subtasks.taskId, taskId));
+
+  const [row] = await db
+    .insert(subtasks)
+    .values({
+      id,
+      taskId,
+      description: input.description,
+      position: (highest ?? -1) + 1,
+    })
+    .returning();
+
+  if (!row) throw new Error('Subtask vanished immediately after insert');
+  return toSubtaskDto(row);
+}
+
+export async function updateSubtask(
+  db: Database,
+  id: string,
+  input: UpdateSubtaskInput,
+): Promise<SubtaskDto | undefined> {
+  const patch: Partial<typeof subtasks.$inferInsert> = { updatedAt: new Date() };
+  if (input.description !== undefined) patch.description = input.description;
+  if (input.done !== undefined) patch.done = input.done;
+  if (input.position !== undefined) patch.position = input.position;
+
+  const [row] = await db.update(subtasks).set(patch).where(eq(subtasks.id, id)).returning();
+  return row ? toSubtaskDto(row) : undefined;
+}
+
+export async function deleteSubtask(db: Database, id: string): Promise<boolean> {
+  const removed = await db.delete(subtasks).where(eq(subtasks.id, id)).returning({ id: subtasks.id });
+  return removed.length > 0;
 }

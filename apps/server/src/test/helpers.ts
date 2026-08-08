@@ -44,7 +44,7 @@ export async function createTestContext(env: Partial<Env> = {}): Promise<TestCon
 /** Wipes every table. Cheap on a small test database and keeps cases independent. */
 export async function resetDatabase(db: Database): Promise<void> {
   await db.execute(
-    sql`truncate table login_attempts, sessions, task_tags, tasks, tags, projects, settings, users restart identity cascade`,
+    sql`truncate table audit_logs, login_attempts, sessions, subtasks, task_tags, tasks, tags, projects, settings, users restart identity cascade`,
   );
 }
 

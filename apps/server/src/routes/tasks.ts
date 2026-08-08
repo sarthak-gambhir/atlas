@@ -1,34 +1,92 @@
 import {
   bulkUpdateSchema,
+  createSubtaskSchema,
   createTaskSchema,
   reorderSchema,
   taskFilterSchema,
+  updateSubtaskSchema,
   updateTaskSchema,
+  type TaskDto,
 } from '@atlas/shared';
-import type { FastifyPluginAsync } from 'fastify';
+import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 
 import { requireAuth } from '../auth/context.ts';
+import { recordAudit } from '../repositories/audit.ts';
 import { canEditProject, isProjectArchived, isProjectMember } from '../repositories/projects.ts';
 import { getScoringSettings } from '../repositories/settings.ts';
 import {
   bulkUpdateTasks,
+  createSubtask,
   createTask,
+  deleteSubtask,
   deleteTask,
+  findSubtaskParent,
   getTask,
   listTasks,
   reorderTasks,
   scoringContext,
+  updateSubtask,
   updateTask,
   type TaskViewer,
 } from '../repositories/tasks.ts';
 
 const taskParamsSchema = z.object({ id: z.uuid() });
+const subtaskParamsSchema = z.object({ id: z.uuid() });
 
 export const taskRoutes: FastifyPluginAsync = async (app) => {
   app.addHook('preHandler', requireAuth);
 
   const context = async () => scoringContext(await getScoringSettings(app.db));
+
+  /**
+   * Resolves a task the caller is allowed to modify, applying the same gate as
+   * `PATCH /tasks/:id`: it must be visible, in a project they can edit, and
+   * neither the project nor the task archived. Replies and returns null on any
+   * failure. Used by the subtask routes so a checklist edit obeys task rules.
+   */
+  const requireEditableTask = async (
+    request: FastifyRequest,
+    reply: FastifyReply,
+    id: string,
+  ): Promise<TaskDto | null> => {
+    const viewer: TaskViewer = { id: request.user!.id, role: request.user!.role };
+    const existing = await getTask(app.db, id, await context());
+    if (!existing) {
+      reply.code(404).send({ error: 'not_found', message: 'No such task.' });
+      return null;
+    }
+    if (
+      viewer.role !== 'admin' &&
+      existing.projectId != null &&
+      !(await isProjectMember(app.db, existing.projectId, viewer.id))
+    ) {
+      reply.code(404).send({ error: 'not_found', message: 'No such task.' });
+      return null;
+    }
+    if (existing.projectId != null && !(await canEditProject(app.db, existing.projectId, viewer))) {
+      reply.code(403).send({
+        error: 'forbidden',
+        message: 'You have view-only access to that project.',
+      });
+      return null;
+    }
+    if (existing.projectId != null && (await isProjectArchived(app.db, existing.projectId))) {
+      reply.code(409).send({
+        error: 'project_archived',
+        message: 'That project is archived. Restore it to edit its tasks.',
+      });
+      return null;
+    }
+    if (existing.status === 'archived') {
+      reply.code(409).send({
+        error: 'task_archived',
+        message: 'Restore the task before editing it.',
+      });
+      return null;
+    }
+    return existing;
+  };
 
   app.get('/tasks', async (request) => {
     const filter = taskFilterSchema.parse(request.query);
@@ -65,6 +123,14 @@ export const taskRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const task = await createTask(app.db, input, request.user!.id, await context());
+    await recordAudit(app.db, {
+      actor: { id: request.user!.id, username: request.user!.username },
+      action: 'task.create',
+      entityType: 'task',
+      entityId: task.id,
+      projectId: task.projectId,
+      metadata: { title: task.title },
+    });
     return reply.code(201).send({ task });
   });
 
@@ -162,6 +228,14 @@ export const taskRoutes: FastifyPluginAsync = async (app) => {
 
     const task = await updateTask(app.db, id, input, await context());
     if (!task) return reply.code(404).send({ error: 'not_found', message: 'No such task.' });
+    await recordAudit(app.db, {
+      actor: { id: request.user!.id, username: request.user!.username },
+      action: 'task.update',
+      entityType: 'task',
+      entityId: task.id,
+      projectId: task.projectId,
+      metadata: { fields: Object.keys(input) },
+    });
     return { task };
   });
 
@@ -202,6 +276,14 @@ export const taskRoutes: FastifyPluginAsync = async (app) => {
 
     const task = await updateTask(app.db, id, { status: 'done' }, await context());
     if (!task) return reply.code(404).send({ error: 'not_found', message: 'No such task.' });
+    await recordAudit(app.db, {
+      actor: { id: request.user!.id, username: request.user!.username },
+      action: 'task.complete',
+      entityType: 'task',
+      entityId: task.id,
+      projectId: task.projectId,
+      metadata: { title: task.title },
+    });
     return { task };
   });
 
@@ -229,6 +311,14 @@ export const taskRoutes: FastifyPluginAsync = async (app) => {
 
     const removed = await deleteTask(app.db, id);
     if (!removed) return reply.code(404).send({ error: 'not_found', message: 'No such task.' });
+    await recordAudit(app.db, {
+      actor: { id: request.user!.id, username: request.user!.username },
+      action: 'task.delete',
+      entityType: 'task',
+      entityId: id,
+      projectId: existing.projectId,
+      metadata: { title: existing.title },
+    });
     return reply.code(204).send();
   });
 
@@ -254,6 +344,15 @@ export const taskRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const outcome = await bulkUpdateTasks(app.db, ids, patch, viewer);
+    if (outcome.ids.length > 0) {
+      await recordAudit(app.db, {
+        actor: { id: request.user!.id, username: request.user!.username },
+        action: 'task.bulk_update',
+        entityType: 'task',
+        projectId: patch.projectId ?? null,
+        metadata: { count: outcome.ids.length, fields: Object.keys(patch) },
+      });
+    }
     return {
       updated: outcome.ids.length,
       ids: outcome.ids,
@@ -267,5 +366,70 @@ export const taskRoutes: FastifyPluginAsync = async (app) => {
     const viewer: TaskViewer = { id: request.user!.id, role: request.user!.role };
     await reorderTasks(app.db, orderedIds);
     return { tasks: await listTasks(app.db, {}, await context(), viewer) };
+  });
+
+  app.post('/tasks/:id/subtasks', async (request, reply) => {
+    const { id } = taskParamsSchema.parse(request.params);
+    const input = createSubtaskSchema.parse(request.body);
+
+    const parent = await requireEditableTask(request, reply, id);
+    if (parent == null) return reply;
+
+    const subtask = await createSubtask(app.db, id, input);
+    await recordAudit(app.db, {
+      actor: { id: request.user!.id, username: request.user!.username },
+      action: 'task.update',
+      entityType: 'subtask',
+      entityId: subtask.id,
+      projectId: parent.projectId,
+      metadata: { taskId: id, subtask: 'add', description: subtask.description },
+    });
+    return reply.code(201).send({ subtask });
+  });
+
+  app.patch('/subtasks/:id', async (request, reply) => {
+    const { id } = subtaskParamsSchema.parse(request.params);
+    const input = updateSubtaskSchema.parse(request.body);
+
+    const taskId = await findSubtaskParent(app.db, id);
+    if (taskId == null) {
+      return reply.code(404).send({ error: 'not_found', message: 'No such subtask.' });
+    }
+    const parent = await requireEditableTask(request, reply, taskId);
+    if (parent == null) return reply;
+
+    const subtask = await updateSubtask(app.db, id, input);
+    if (!subtask) return reply.code(404).send({ error: 'not_found', message: 'No such subtask.' });
+    await recordAudit(app.db, {
+      actor: { id: request.user!.id, username: request.user!.username },
+      action: 'task.update',
+      entityType: 'subtask',
+      entityId: subtask.id,
+      projectId: parent.projectId,
+      metadata: { taskId, subtask: 'update', fields: Object.keys(input) },
+    });
+    return { subtask };
+  });
+
+  app.delete('/subtasks/:id', async (request, reply) => {
+    const { id } = subtaskParamsSchema.parse(request.params);
+
+    const taskId = await findSubtaskParent(app.db, id);
+    if (taskId == null) {
+      return reply.code(404).send({ error: 'not_found', message: 'No such subtask.' });
+    }
+    const parent = await requireEditableTask(request, reply, taskId);
+    if (parent == null) return reply;
+
+    await deleteSubtask(app.db, id);
+    await recordAudit(app.db, {
+      actor: { id: request.user!.id, username: request.user!.username },
+      action: 'task.update',
+      entityType: 'subtask',
+      entityId: id,
+      projectId: parent.projectId,
+      metadata: { taskId, subtask: 'delete' },
+    });
+    return reply.code(204).send();
   });
 };

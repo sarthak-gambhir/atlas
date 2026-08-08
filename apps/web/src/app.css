@@ -40,6 +40,27 @@ body {
   --atlas-topbar-h: 3.5rem;
 }
 
+.atlas-sidebar {
+  &[data-collapsed] {
+    .atlas-sidebar-header {
+      justify-content: center;
+      .atlas-brand-link {
+        margin-left: 0;
+      }
+    }
+  }
+
+  &:not([data-collapsed]) {
+    .atlas-sidebar-header {
+      justify-content: flex-start;
+
+      .atlas-brand-link {
+        margin-left: var(--space-3);
+      }
+    }
+  }
+}
+
 /* Match the sidebar header's height and vertically center the top-bar row so
  * the two header strips read as one continuous band. */
 .atlas-header,

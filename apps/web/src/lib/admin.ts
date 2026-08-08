@@ -97,9 +97,17 @@ export function useImportBackup() {
   });
 }
 
-/** Streams the export straight to a file, so a large backlog never sits in state. */
-export async function downloadBackup(): Promise<void> {
-  const response = await fetch('/api/export', { credentials: 'same-origin' });
+/**
+ * Streams the export straight to a file, so a large backlog never sits in state.
+ * Passing project ids scopes the export to those projects and their tasks;
+ * omitting them (or an empty array) exports the whole database.
+ */
+export async function downloadBackup(projectIds: string[] = []): Promise<void> {
+  const query = new URLSearchParams();
+  for (const id of projectIds) query.append('projectIds', id);
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+
+  const response = await fetch(`/api/export${suffix}`, { credentials: 'same-origin' });
   if (!response.ok) throw new Error(`Export failed with status ${response.status}`);
 
   const url = URL.createObjectURL(await response.blob());

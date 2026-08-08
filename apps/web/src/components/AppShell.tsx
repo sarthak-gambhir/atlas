@@ -197,8 +197,13 @@ export function AppShell({ children }: AppShellProps) {
       </a>
 
       {!isMobile ? (
-        <Sidebar aria-label="Main" collapsed={navCollapsed} onCollapsedChange={setNavCollapsed}>
-          <SidebarHeader>
+        <Sidebar
+          className="atlas-sidebar"
+          aria-label="Main"
+          collapsed={navCollapsed}
+          onCollapsedChange={setNavCollapsed}
+        >
+          <SidebarHeader className="atlas-sidebar-header">
             <Link className="atlas-brand-link" to="/" aria-label="Atlas home">
               <Inline
                 gap={2}
@@ -216,7 +221,7 @@ export function AppShell({ children }: AppShellProps) {
               </Inline>
             </Link>
           </SidebarHeader>
-          <SidebarBody>
+          <SidebarBody className="atlas-sidebar-body">
             <SideNav
               aria-label="Sections"
               collapsed={navCollapsed}
@@ -224,7 +229,7 @@ export function AppShell({ children }: AppShellProps) {
               items={navItems}
             />
           </SidebarBody>
-          <SidebarFooter>
+          <SidebarFooter className="atlas-sidebar-footer">
             <Inline
               justify={navCollapsed ? 'center' : 'end'}
               wrap={false}

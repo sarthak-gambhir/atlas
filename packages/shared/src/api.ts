@@ -82,6 +82,31 @@ export const updateTaskSchema = taskInputSchema
   .refine(datesInOrder, datesInOrderIssue);
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;
 
+/** A checklist item under a task: description, order and done flag, nothing more. */
+export const createSubtaskSchema = z.object({
+  description: z.string().trim().min(1).max(500),
+});
+export type CreateSubtaskInput = z.infer<typeof createSubtaskSchema>;
+
+export const updateSubtaskSchema = z
+  .object({
+    description: z.string().trim().min(1).max(500).optional(),
+    done: z.boolean().optional(),
+    position: z.number().int().min(0).optional(),
+  })
+  .refine((patch) => Object.keys(patch).length > 0, {
+    message: 'Choose at least one field to change.',
+  });
+export type UpdateSubtaskInput = z.infer<typeof updateSubtaskSchema>;
+
+export interface SubtaskDto {
+  id: string;
+  taskId: string;
+  description: string;
+  done: boolean;
+  position: number;
+}
+
 /** How many tasks one bulk request may touch. */
 export const BULK_UPDATE_LIMIT = 200;
 
@@ -270,6 +295,14 @@ export const usernameAvailabilityQuerySchema = z.object({
  * A portable snapshot. Projects, tags and people are referenced by name rather
  * than id so a bundle can be restored into a different database.
  */
+/** A checklist item in a backup. `position` defaults to the array index on import. */
+export const exportedSubtaskSchema = z.object({
+  description: z.string().trim().min(1).max(500),
+  done: z.boolean().optional(),
+  position: z.number().int().min(0).optional(),
+});
+export type ExportedSubtask = z.infer<typeof exportedSubtaskSchema>;
+
 export const exportedTaskSchema = z.object({
   title: z.string().trim().min(1).max(200),
   notes: z.string().max(10_000).nullish(),
@@ -286,6 +319,7 @@ export const exportedTaskSchema = z.object({
   dueDate: isoDateSchema.nullish(),
   manualRank: z.number().nullish(),
   tags: z.array(tagNameSchema).max(20),
+  subtasks: z.array(exportedSubtaskSchema).max(200).optional(),
   createdAt: z.string().optional(),
   completedAt: z.string().nullish(),
 });
@@ -384,10 +418,88 @@ export interface TaskDto {
   dueEndDate: string | null;
   manualRank: number | null;
   tags: string[];
+  /** Ordered checklist items; empty when the task has none. */
+  subtasks: SubtaskDto[];
   createdAt: string;
   updatedAt: string;
   completedAt: string | null;
   /** Computed per request, never stored. */
   score: number;
   bucket: (typeof PRIORITY_BUCKETS)[number];
+}
+
+/**
+ * Optional export scoping. With no `projectIds` the export is the whole
+ * database (the historical behaviour); with ids it is limited to those
+ * projects and their tasks. Accepts repeated keys or a comma-joined string.
+ */
+export const exportQuerySchema = z.object({
+  projectIds: z.preprocess((value) => {
+    if (value == null) return undefined;
+    const list = Array.isArray(value) ? value : [value];
+    const ids = list
+      .flatMap((entry) => String(entry).split(','))
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+    return ids.length > 0 ? ids : undefined;
+  }, z.array(z.uuid()).optional()),
+});
+export type ExportQuery = z.infer<typeof exportQuerySchema>;
+
+/**
+ * Every mutation the audit trail records. Grouped by entity so the UI can label
+ * and filter them. Auth and settings changes are deliberately not audited.
+ */
+export const AUDIT_ACTIONS = [
+  'task.create',
+  'task.update',
+  'task.complete',
+  'task.delete',
+  'task.bulk_update',
+  'project.create',
+  'project.update',
+  'project.archive',
+  'project.restore',
+  'project.delete',
+  'project.member.add',
+  'project.member.role',
+  'project.member.remove',
+  'project.owner.transfer',
+  'user.create',
+  'user.update',
+  'user.disable',
+  'user.delete',
+  'user.password_reset',
+] as const;
+export type AuditAction = (typeof AUDIT_ACTIONS)[number];
+
+export interface AuditLogDto {
+  id: string;
+  actorUserId: string | null;
+  actorUsername: string;
+  /** One of AUDIT_ACTIONS; typed as string since it is read back from the DB. */
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  projectId: string | null;
+  /** Resolved for display; null if the project was deleted or never applied. */
+  projectName: string | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+/** How many audit rows one page returns by default. */
+export const AUDIT_PAGE_SIZE = 50;
+
+export const auditQuerySchema = z.object({
+  action: z.enum(AUDIT_ACTIONS).optional(),
+  actorUserId: z.uuid().optional(),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
+});
+export type AuditQuery = z.infer<typeof auditQuerySchema>;
+
+export interface AuditLogPageDto {
+  rows: AuditLogDto[];
+  total: number;
 }

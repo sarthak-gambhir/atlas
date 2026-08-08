@@ -1,12 +1,19 @@
-import type { BackupBundle, ExportedTask, ImportResultDto, ProjectMemberRole } from '@atlas/shared';
+import type {
+  BackupBundle,
+  ExportedSubtask,
+  ExportedTask,
+  ImportResultDto,
+  ProjectMemberRole,
+} from '@atlas/shared';
 import { alias } from 'drizzle-orm/pg-core';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 
 import type { Database } from './db/index.ts';
 import {
   projectDefaultTags,
   projectMembers,
   projects,
+  subtasks,
   tags,
   taskTags,
   tasks,
@@ -14,10 +21,26 @@ import {
 } from './db/schema.ts';
 import { getScoringSettings, saveScoringSettings } from './repositories/settings.ts';
 
+export interface BuildBackupOptions {
+  /**
+   * Limit the export to these projects and their tasks. Omitted (or empty) means
+   * the whole database, matching the historical behaviour. Project-less tasks are
+   * only included in an unscoped export.
+   */
+  projectIds?: string[];
+}
+
 /** Everything a fresh database needs to look like this one, minus credentials. */
-export async function buildBackup(db: Database): Promise<BackupBundle> {
+export async function buildBackup(
+  db: Database,
+  options: BuildBackupOptions = {},
+): Promise<BackupBundle> {
   const defaultAssignee = alias(users, 'default_assignee');
   const owner = alias(users, 'owner_user');
+
+  const scope = options.projectIds?.length ? options.projectIds : null;
+  const projectScope = scope ? inArray(projects.id, scope) : undefined;
+  const taskScope = scope ? inArray(tasks.projectId, scope) : undefined;
 
   const [projectRows, taskRows, scoring] = await Promise.all([
     db
@@ -28,14 +51,38 @@ export async function buildBackup(db: Database): Promise<BackupBundle> {
       })
       .from(projects)
       .leftJoin(defaultAssignee, eq(defaultAssignee.id, projects.defaultAssigneeId))
-      .leftJoin(owner, eq(owner.id, projects.ownerId)),
+      .leftJoin(owner, eq(owner.id, projects.ownerId))
+      .where(projectScope),
     db
       .select({ task: tasks, projectName: projects.name, assigneeUsername: users.username })
       .from(tasks)
       .leftJoin(projects, eq(projects.id, tasks.projectId))
-      .leftJoin(users, eq(users.id, tasks.assigneeId)),
+      .leftJoin(users, eq(users.id, tasks.assigneeId))
+      .where(taskScope),
     getScoringSettings(db),
   ]);
+
+  // Subtasks for exactly the tasks being exported, grouped by parent, ordered.
+  const exportedTaskIds = taskRows.map((row) => row.task.id);
+  const subtasksByTask = new Map<string, ExportedSubtask[]>();
+  if (exportedTaskIds.length > 0) {
+    const subtaskRows = await db
+      .select({
+        taskId: subtasks.taskId,
+        description: subtasks.description,
+        done: subtasks.done,
+        position: subtasks.position,
+      })
+      .from(subtasks)
+      .where(inArray(subtasks.taskId, exportedTaskIds))
+      .orderBy(subtasks.position, subtasks.createdAt);
+    for (const row of subtaskRows) {
+      const entry = { description: row.description, done: row.done, position: row.position };
+      const existing = subtasksByTask.get(row.taskId);
+      if (existing) existing.push(entry);
+      else subtasksByTask.set(row.taskId, [entry]);
+    }
+  }
 
   const memberRows = await db
     .select({
@@ -116,6 +163,7 @@ export async function buildBackup(db: Database): Promise<BackupBundle> {
       dueEndDate: task.dueEndDate,
       manualRank: task.manualRank,
       tags: tagsByTask.get(task.id) ?? [],
+      subtasks: subtasksByTask.get(task.id) ?? [],
       createdAt: task.createdAt.toISOString(),
       completedAt: task.completedAt?.toISOString() ?? null,
     })),
@@ -313,6 +361,20 @@ export async function restoreBackup(
       for (const name of task.tags) {
         const tagId = await ensureTag(name);
         await tx.insert(taskTags).values({ taskId, tagId }).onConflictDoNothing();
+      }
+
+      // Subtasks are children of the task; recreate them in their exported order,
+      // falling back to the array index when a position was not recorded.
+      if (task.subtasks?.length) {
+        await tx.insert(subtasks).values(
+          task.subtasks.map((subtask, index) => ({
+            id: crypto.randomUUID(),
+            taskId,
+            description: subtask.description,
+            position: subtask.position ?? index,
+            done: subtask.done ?? false,
+          })),
+        );
       }
     }
   });

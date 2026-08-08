@@ -61,14 +61,34 @@ async function seedContent() {
   });
 }
 
-async function exportBundle(): Promise<BackupBundle> {
+async function exportBundle(query = ''): Promise<BackupBundle> {
   const response = await ctx.app.inject({
     method: 'GET',
-    url: '/api/export',
+    url: `/api/export${query}`,
     headers: { cookie },
   });
   expect(response.statusCode).toBe(200);
   return response.json<BackupBundle>();
+}
+
+async function createProject(name: string): Promise<string> {
+  const response = await ctx.app.inject({
+    method: 'POST',
+    url: '/api/projects',
+    headers: { cookie },
+    payload: { name },
+  });
+  return response.json<{ project: ProjectDto }>().project.id;
+}
+
+async function createTaskIn(projectId: string, title: string): Promise<string> {
+  const response = await ctx.app.inject({
+    method: 'POST',
+    url: '/api/tasks',
+    headers: { cookie },
+    payload: { title, projectId },
+  });
+  return response.json<{ task: TaskDto }>().task.id;
 }
 
 describe('GET /api/export', () => {
@@ -128,6 +148,74 @@ describe('GET /api/export', () => {
 
     expect(response.body).not.toContain('scrypt');
     expect(response.body).not.toContain('passwordHash');
+  });
+
+  it('limits the export to the chosen projects and their tasks', async () => {
+    const alpha = await createProject('Alpha');
+    const beta = await createProject('Beta');
+    await createTaskIn(alpha, 'Alpha task');
+    await createTaskIn(beta, 'Beta task');
+    // A project-less task: only present in an unscoped export.
+    await ctx.app.inject({
+      method: 'POST',
+      url: '/api/tasks',
+      headers: { cookie },
+      payload: { title: 'Loose task' },
+    });
+
+    const scoped = await exportBundle(`?projectIds=${alpha}`);
+    expect(scoped.projects.map((project) => project.name)).toEqual(['Alpha']);
+    expect(scoped.tasks.map((task) => task.title)).toEqual(['Alpha task']);
+
+    const all = await exportBundle();
+    expect(all.projects.map((project) => project.name).toSorted()).toEqual(['Alpha', 'Beta']);
+    expect(all.tasks.map((task) => task.title).toSorted()).toEqual([
+      'Alpha task',
+      'Beta task',
+      'Loose task',
+    ]);
+  });
+
+  it('round-trips subtasks through export and import', async () => {
+    const task = await createTaskIn(await createProject('Checklist'), 'Has steps');
+    const one = await ctx.app.inject({
+      method: 'POST',
+      url: `/api/tasks/${task}/subtasks`,
+      headers: { cookie },
+      payload: { description: 'Step one' },
+    });
+    await ctx.app.inject({
+      method: 'POST',
+      url: `/api/tasks/${task}/subtasks`,
+      headers: { cookie },
+      payload: { description: 'Step two' },
+    });
+    const oneId = one.json<{ subtask: { id: string } }>().subtask.id;
+    await ctx.app.inject({
+      method: 'PATCH',
+      url: `/api/subtasks/${oneId}`,
+      headers: { cookie },
+      payload: { done: true },
+    });
+
+    const bundle = await exportBundle();
+    const exported = bundle.tasks.find((entry) => entry.title === 'Has steps');
+    expect(exported?.subtasks).toEqual([
+      { description: 'Step one', done: true, position: 0 },
+      { description: 'Step two', done: false, position: 1 },
+    ]);
+
+    await resetDatabase(ctx.db);
+    await seedUser(ctx.db, { username: 'ada', displayName: 'Ada', role: 'admin' });
+    cookie = await login(ctx.app, 'ada');
+
+    await importBundle(bundle);
+    const restored = await exportBundle();
+    const restoredTask = restored.tasks.find((entry) => entry.title === 'Has steps');
+    expect(restoredTask?.subtasks).toEqual([
+      { description: 'Step one', done: true, position: 0 },
+      { description: 'Step two', done: false, position: 1 },
+    ]);
   });
 });
 

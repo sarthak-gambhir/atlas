@@ -4,8 +4,10 @@ import {
   type BulkUpdateResultDto,
   type CreateTaskInput,
   type ScoringSettings,
+  type SubtaskDto,
   type TaskDto,
   type TaskFilter,
+  type UpdateSubtaskInput,
   type UpdateTaskInput,
 } from '@atlas/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -96,4 +98,21 @@ export function useBulkUpdateTasks() {
   return useTaskMutation((input: BulkUpdateInput) =>
     api.post<BulkUpdateResultDto>('/tasks/bulk', input),
   );
+}
+
+/** Subtasks live inside their task's DTO, so their mutations invalidate the list too. */
+export function useAddSubtask() {
+  return useTaskMutation(({ taskId, description }: { taskId: string; description: string }) =>
+    api.post<{ subtask: SubtaskDto }>(`/tasks/${taskId}/subtasks`, { description }),
+  );
+}
+
+export function useUpdateSubtask() {
+  return useTaskMutation(({ id, ...patch }: UpdateSubtaskInput & { id: string }) =>
+    api.patch<{ subtask: SubtaskDto }>(`/subtasks/${id}`, patch),
+  );
+}
+
+export function useDeleteSubtask() {
+  return useTaskMutation((id: string) => api.delete<void>(`/subtasks/${id}`));
 }

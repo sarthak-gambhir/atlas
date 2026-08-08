@@ -15,12 +15,7 @@ import { useState, type FormEvent } from 'react';
 
 import { useChangePassword } from '../../lib/admin.ts';
 import { ACTION_ICONS } from '../../lib/icons.ts';
-import {
-  isDemoAccount,
-  useLogout,
-  useSession,
-  useSignOutOtherDevices,
-} from '../../lib/session.ts';
+import { isDemoAccount, useLogout, useSession, useSignOutOtherDevices } from '../../lib/session.ts';
 import { IconLabel } from '../IconLabel.tsx';
 import { EditProfileModal } from './EditProfileModal.tsx';
 
@@ -55,7 +50,9 @@ function IdentitySection() {
           Profile
         </Heading>
         <Text size="sm">
-          {demo ? 'The shared demo profile is read-only.' : 'How you appear across Atlas.'}
+          {demo
+            ? 'The demo account is shared, so its profile cannot be edited. Create your own account to manage your profile.'
+            : 'How you appear across Atlas.'}
         </Text>
       </Stack>
 

@@ -96,7 +96,7 @@ export function TaskFilterFields({
                   active={!state.includeClosed}
                   onToggle={() => set({ includeClosed: !state.includeClosed })}
                 >
-                  Hide closed
+                  Hide completed
                 </QuickFilterChip>
                 <QuickFilterChip
                   icon={ACTION_ICONS.archive}

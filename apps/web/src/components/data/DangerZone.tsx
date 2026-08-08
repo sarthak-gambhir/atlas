@@ -89,7 +89,7 @@ export function DangerZone() {
               This deletes every task, project and tag. People and their passwords remain. There is
               no undo.
             </Alert>
-            <FormField label={`Type "${CONFIRM_WORD}" to confirm`}>
+            <FormField label={`Type "${CONFIRM_WORD}" (lowercase) to permanently delete all data`}>
               <Input
                 value={confirmText}
                 autoFocus

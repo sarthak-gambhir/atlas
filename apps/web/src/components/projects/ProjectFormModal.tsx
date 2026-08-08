@@ -10,6 +10,7 @@ import {
   ModalFooter,
   ModalHeader,
   Stack,
+  Text,
   Textarea,
   useToast,
 } from '@astrabound/duality';
@@ -138,9 +139,12 @@ export function ProjectFormModal({ project, isOpen, onClose }: ProjectFormModalP
 
             <Divider />
 
-            <Heading level={3} visualLevel={5}>
-              Defaults
-            </Heading>
+            <Stack gap={1}>
+              <Heading level={3} visualLevel={5}>
+                Defaults
+              </Heading>
+              <Text size="sm">Default values applied when creating tasks in this project.</Text>
+            </Stack>
             <ProjectDefaultsFields value={defaults} onChange={setDefaults} memberIds={memberIds} />
           </Stack>
         </ModalBody>

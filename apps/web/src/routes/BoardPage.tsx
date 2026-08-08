@@ -78,8 +78,8 @@ export function BoardPage() {
       </StatGroup>
 
       <Text size="sm">
-        Active work grouped by status, highest score first. Archived tasks are hidden here; open
-        Tasks and turn on “Show archived” to see them.
+        Active work organized by status, highest-scoring first. Archived tasks are hidden; go to the
+        Tasks page and enable "Show archived" to see them.
       </Text>
 
       {error ? <Alert tone="error">{error.message}</Alert> : null}

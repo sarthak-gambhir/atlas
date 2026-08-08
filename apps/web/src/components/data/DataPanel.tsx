@@ -73,7 +73,7 @@ export function DataPanel() {
           <Text size="sm">
             Downloads a plain JSON snapshot of projects, tasks, tags and scoring settings.
             Everything is named rather than referenced by id, so it can be restored into a fresh
-            database. Passwords are never included.
+            database. Passwords are never exported and must be reset separately if restoring.
           </Text>
         </Stack>
 

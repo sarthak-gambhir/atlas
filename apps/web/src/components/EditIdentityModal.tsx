@@ -71,7 +71,8 @@ export function EditIdentityModal({
 
   let usernameError: string | undefined;
   if (usernameChanged && !validFormat) {
-    usernameError = '3–50 characters: letters, numbers, dot, dash and underscore only.';
+    usernameError =
+      'Must be 3-50 characters. Use letters, numbers, dots (.), dashes (-), or underscores (_) only.';
   } else if (taken) {
     usernameError = 'That username is taken.';
   }

@@ -29,6 +29,11 @@ import { ACTION_ICONS } from '../lib/icons.ts';
 import { useCompleteTask, useTasks, useUpdateTask } from '../lib/tasks.ts';
 import { useIsMobile } from '../lib/useIsMobile.ts';
 
+/** Truncates task title for toast messages to avoid overflow. */
+function truncateTitle(title: string, maxLength = 60): string {
+  return title.length > maxLength ? `${title.slice(0, maxLength)}...` : title;
+}
+
 interface TaskTableProps {
   query: TaskFilter;
   /** Shown when the query returns no rows (and is not loading). */
@@ -121,7 +126,8 @@ export function TaskTable({
               update.mutate(
                 { id: task.id, status: task.completedAt ? 'done' : 'backlog' },
                 {
-                  onSuccess: () => toast({ title: `Restored "${task.title}"`, tone: 'success' }),
+                  onSuccess: () =>
+                    toast({ title: `Restored "${truncateTitle(task.title)}"`, tone: 'success' }),
                   onError: (cause) =>
                     toast({
                       title: 'Could not restore',
@@ -148,7 +154,8 @@ export function TaskTable({
               update.mutate(
                 { id: task.id, status: 'archived' },
                 {
-                  onSuccess: () => toast({ title: `Archived "${task.title}"`, tone: 'success' }),
+                  onSuccess: () =>
+                    toast({ title: `Archived "${truncateTitle(task.title)}"`, tone: 'success' }),
                   onError: (cause) =>
                     toast({
                       title: 'Could not archive',
@@ -172,7 +179,8 @@ export function TaskTable({
           onClick={(event) => {
             event.stopPropagation();
             complete.mutate(task.id, {
-              onSuccess: () => toast({ title: `Completed "${task.title}"`, tone: 'success' }),
+              onSuccess: () =>
+                toast({ title: `Completed "${truncateTitle(task.title)}"`, tone: 'success' }),
             });
           }}
         >

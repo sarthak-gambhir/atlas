@@ -66,7 +66,11 @@ export function SettingsPage() {
               <Tab value="account">Account</Tab>
               {isAdmin ? <Tab value="people">People</Tab> : null}
               {isAdmin ? <Tab value="data">Data</Tab> : null}
-              {isAdmin ? <Tab value="audit">Audit log</Tab> : null}
+              {isAdmin ? (
+                <Tab value="audit" title="View a history of who changed what and when">
+                  Audit log
+                </Tab>
+              ) : null}
             </TabList>
 
             <TabPanel value="scoring">

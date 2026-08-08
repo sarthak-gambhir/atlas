@@ -210,7 +210,7 @@ export function QuickAddModal({ onClose, initialProjectId = '' }: QuickAddModalP
             </FormField>
 
             <Inline gap={3} align="start">
-              <FormField label="Impact" hint="1 low, 5 high">
+              <FormField label="Impact" hint="1 = low, 5 = high">
                 <NumberInput
                   value={impact}
                   min={1}
@@ -219,7 +219,7 @@ export function QuickAddModal({ onClose, initialProjectId = '' }: QuickAddModalP
                 />
               </FormField>
 
-              <FormField label="Effort" hint="1 cheap, 5 costly">
+              <FormField label="Effort" hint="1 = low, 5 = high">
                 <NumberInput
                   value={effort}
                   min={1}

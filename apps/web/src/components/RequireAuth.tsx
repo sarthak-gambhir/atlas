@@ -9,7 +9,7 @@ export function RequireAuth() {
 
   if (isPending) {
     return (
-      <Stack align="center" justify="center" gap={3}>
+      <Stack align="center" justify="center" gap={3} style={{ minHeight: '100vh' }}>
         <Spinner label="Loading" />
       </Stack>
     );

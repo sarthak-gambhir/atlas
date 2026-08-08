@@ -12,6 +12,7 @@ import { PAGE_ICONS } from '../lib/nav.ts';
 import { useProjects } from '../lib/organization.ts';
 import { useSession } from '../lib/session.ts';
 import { useBooleanParam, useStringParam } from '../lib/urlState.ts';
+import { useIsMobile } from '../lib/useIsMobile.ts';
 
 /** `null` when the form is closed, `{}` when creating, `{ project }` when editing. */
 type FormState = { project?: ProjectDto } | null;
@@ -22,6 +23,7 @@ export function ProjectsPage() {
   const [ownedOnly, setOwnedOnly] = useBooleanParam('owned');
   const [search, setSearch] = useStringParam('q');
   const [form, setForm] = useState<FormState>(null);
+  const isMobile = useIsMobile();
 
   const { data: projects, isPending, error } = useProjects(includeArchived);
   const { data: session } = useSession();
@@ -82,7 +84,7 @@ export function ProjectsPage() {
               onClear={clearFilters}
             />
             <Button className="atlas-button" size="md" variant="solid" onClick={() => setForm({})}>
-              <IconLabel icon={ACTION_ICONS.create}>New project</IconLabel>
+              <IconLabel icon={ACTION_ICONS.create}>{isMobile ? 'New' : 'New project'}</IconLabel>
             </Button>
           </Inline>
         }

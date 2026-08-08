@@ -9,7 +9,7 @@ export function NotFoundPage() {
       icon={<Icon icon={ACTION_ICONS.warning} size={64} />}
       title="Nothing here"
       description="That page does not exist."
-      action={<BackLink fallback={{ label: 'Tasks', to: '/' }} variant="button" />}
+      action={<BackLink fallback={{ label: 'Tasks', to: '/tasks' }} variant="button" />}
     />
   );
 }

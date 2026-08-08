@@ -2,6 +2,7 @@ import type { IconType } from 'react-icons';
 import {
   RiFolderLine,
   RiGridLine,
+  RiInformationLine,
   RiLayoutColumnLine,
   RiListCheck2,
   RiSettings3Line,
@@ -23,21 +24,28 @@ export const PAGE_ICONS = {
   matrix: RiGridLine,
   projects: RiFolderLine,
   settings: RiSettings3Line,
+  about: RiInformationLine,
 } satisfies Record<string, IconType>;
 
 export const NAV_ITEMS: readonly NavItem[] = [
-  { path: '/', label: 'Tasks', Icon: PAGE_ICONS.tasks },
+  { path: '/tasks', label: 'Tasks', Icon: PAGE_ICONS.tasks },
   { path: '/board', label: 'Board', Icon: PAGE_ICONS.board },
   { path: '/matrix', label: 'Matrix', Icon: PAGE_ICONS.matrix },
   { path: '/projects', label: 'Projects', Icon: PAGE_ICONS.projects },
   { path: '/settings', label: 'Settings', Icon: PAGE_ICONS.settings },
+  { path: '/', label: 'About', Icon: PAGE_ICONS.about },
 ];
 
-/** The longest nav path the current location sits under, for highlighting. */
+/**
+ * The nav path the current location sits under, for highlighting. About (`/`)
+ * only matches exactly; the other items match any nested path. Unknown paths
+ * highlight nothing.
+ */
 export function activeNavPath(pathname: string): string {
+  if (pathname === '/') return '/';
   return (
     NAV_ITEMS.map((item) => item.path)
       .filter((path) => path !== '/' && pathname.startsWith(path))
-      .at(0) ?? '/'
+      .at(0) ?? ''
   );
 }

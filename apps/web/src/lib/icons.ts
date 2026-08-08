@@ -45,6 +45,8 @@ import {
   RiUserFollowLine,
   RiUserForbidLine,
   RiUserStarLine,
+  RiCalendarLine,
+  RiHashtag,
 } from 'react-icons/ri';
 
 /**
@@ -53,6 +55,9 @@ import {
  * verb reads the same everywhere it appears.
  */
 export const ACTION_ICONS = {
+  tag: RiHashtag,
+  calendar: RiCalendarLine,
+
   create: RiAddLine,
   edit: RiEditLine,
   delete: RiDeleteBinLine,

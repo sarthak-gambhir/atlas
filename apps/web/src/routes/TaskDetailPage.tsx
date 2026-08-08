@@ -41,7 +41,7 @@ export function TaskDetailPage() {
   const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
 
-  const backFallback = { label: 'Tasks', to: '/' };
+  const backFallback = { label: 'Tasks', to: '/tasks' };
 
   if (!task) {
     return (
@@ -193,7 +193,7 @@ export function TaskDetailPage() {
           key={task.id}
           task={task}
           onClose={() => setEditing(false)}
-          onDeleted={() => void navigate('/')}
+          onDeleted={() => void navigate('/tasks')}
         />
       ) : null}
     </Stack>

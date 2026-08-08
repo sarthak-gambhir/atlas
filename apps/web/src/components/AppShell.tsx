@@ -20,8 +20,8 @@ import {
   Stack,
   Text,
 } from '@astrabound/duality';
-import { useCallback, useEffect, useState } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router';
 
 import { ACTION_ICONS } from '../lib/icons.ts';
 import { NAV_ITEMS, activeNavPath } from '../lib/nav.ts';
@@ -44,7 +44,13 @@ function isTyping(target: EventTarget | null): boolean {
 // localStorage flag, read once on mount and written whenever it changes.
 const NAV_COLLAPSED_KEY = 'atlas-nav-collapsed';
 
-export function AppShell() {
+interface AppShellProps {
+  /** Page content to render in place of the routed `<Outlet />` (e.g. the About
+   * landing shown at `/` when signed in). */
+  children?: ReactNode;
+}
+
+export function AppShell({ children }: AppShellProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { data: user } = useSession();
@@ -193,20 +199,22 @@ export function AppShell() {
       {!isMobile ? (
         <Sidebar aria-label="Main" collapsed={navCollapsed} onCollapsedChange={setNavCollapsed}>
           <SidebarHeader>
-            <Inline
-              gap={2}
-              align="center"
-              justify={navCollapsed ? 'center' : 'start'}
-              wrap={false}
-              style={{ flex: 1, minWidth: 0 }}
-            >
-              <BrandMark size={24} />
-              {!navCollapsed && (
-                <Heading level={2} visualLevel={5}>
-                  Atlas
-                </Heading>
-              )}
-            </Inline>
+            <Link className="atlas-brand-link" to="/" aria-label="Atlas home">
+              <Inline
+                gap={2}
+                align="center"
+                justify={navCollapsed ? 'center' : 'start'}
+                wrap={false}
+                style={{ flex: 1, minWidth: 0 }}
+              >
+                <BrandMark size={24} />
+                {!navCollapsed && (
+                  <Heading level={2} visualLevel={5}>
+                    Atlas
+                  </Heading>
+                )}
+              </Inline>
+            </Link>
           </SidebarHeader>
           <SidebarBody>
             <SideNav
@@ -247,10 +255,14 @@ export function AppShell() {
                 >
                   <Icon icon={ACTION_ICONS.menu} />
                 </Button>
-                <BrandMark size={22} />
-                <Heading level={2} visualLevel={5}>
-                  Atlas
-                </Heading>
+                <Link className="atlas-brand-link" to="/" aria-label="Atlas home">
+                  <Inline gap={2} align="center" wrap={false}>
+                    <BrandMark size={22} />
+                    <Heading level={2} visualLevel={5}>
+                      Atlas
+                    </Heading>
+                  </Inline>
+                </Link>
               </Inline>
             ) : null}
 
@@ -271,7 +283,7 @@ export function AppShell() {
           style={{ flex: 1, minWidth: 0, minHeight: 0 }}
         >
           <QuickAddContext.Provider value={openQuickAdd}>
-            <Outlet />
+            {children ?? <Outlet />}
           </QuickAddContext.Provider>
         </Box>
       </Box>
@@ -287,12 +299,19 @@ export function AppShell() {
           aria-label="Main navigation"
         >
           <DrawerHeader>
-            <Inline gap={2} align="center">
-              <BrandMark size={24} />
-              <Heading level={2} visualLevel={5}>
-                Atlas
-              </Heading>
-            </Inline>
+            <Link
+              className="atlas-brand-link"
+              to="/"
+              aria-label="Atlas home"
+              onClick={() => setNavOpen(false)}
+            >
+              <Inline gap={2} align="center">
+                <BrandMark size={24} />
+                <Heading level={2} visualLevel={5}>
+                  Atlas
+                </Heading>
+              </Inline>
+            </Link>
           </DrawerHeader>
           <DrawerBody>
             <SideNav

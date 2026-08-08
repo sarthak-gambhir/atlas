@@ -13,8 +13,9 @@ import {
   Text,
 } from '@astrabound/duality';
 import { useState, type FormEvent } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router';
 
+import { BrandMark } from '../components/BrandMark.tsx';
 import { ApiError } from '../lib/api.ts';
 import { useLogin, useSession } from '../lib/session.ts';
 
@@ -31,7 +32,7 @@ export function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
-  const destination = (location.state as LocationState | null)?.from ?? '/';
+  const destination = (location.state as LocationState | null)?.from ?? '/tasks';
 
   if (!isPending && user) return <Navigate to={destination} replace />;
 
@@ -50,7 +51,10 @@ export function LoginPage() {
     <Box paddingX={4} style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
       <Container size="sm" style={{ width: '100%' }}>
         <Stack gap={5}>
-          <Heading level={1}>Atlas</Heading>
+          <Link className="atlas-brand-link" to="/" aria-label="About Atlas">
+            <BrandMark size={32} />
+            <Heading level={1}>Atlas</Heading>
+          </Link>
 
           <Card as="form" onSubmit={handleSubmit}>
             <CardHeader>

@@ -4,6 +4,7 @@ import { BrowserRouter, Route, Routes } from 'react-router';
 
 import { AppShell } from './components/AppShell.tsx';
 import { RequireAuth } from './components/RequireAuth.tsx';
+import { HomeRoute } from './routes/HomeRoute.tsx';
 import { TasksPage } from './routes/TasksPage.tsx';
 import { BoardPage } from './routes/BoardPage.tsx';
 import { LoginPage } from './routes/LoginPage.tsx';
@@ -33,10 +34,11 @@ export function App() {
         <ToastProvider placement="bottom-end" max={3}>
           <BrowserRouter>
             <Routes>
+              <Route path="/" element={<HomeRoute />} />
               <Route path="/login" element={<LoginPage />} />
               <Route element={<RequireAuth />}>
                 <Route element={<AppShell />}>
-                  <Route index element={<TasksPage />} />
+                  <Route path="tasks" element={<TasksPage />} />
                   <Route path="tasks/:id" element={<TaskDetailPage />} />
                   <Route path="board" element={<BoardPage />} />
                   <Route path="matrix" element={<MatrixPage />} />

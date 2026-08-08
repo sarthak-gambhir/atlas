@@ -453,6 +453,22 @@ button.atlas-matrix-tile:hover {
   outline-offset: 2px;
 }
 
+/* The brand (logo + wordmark) as a home link. Inherits the header color and
+ * drops the underline so it reads as the mark, not a text link. */
+.atlas-brand-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.atlas-brand-link:focus-visible {
+  outline: var(--border-width) solid var(--fg);
+  outline-offset: 2px;
+}
+
 /* Make the whole project card clickable: the name's link stretches a covering
  * pseudo-element over the card, so a click anywhere navigates. The favorite and
  * action controls are raised above it (see .atlas-project-card__actions) so they
@@ -675,6 +691,14 @@ a.atlas-record-card:focus-visible {
 }
 
 @media screen and (max-width: 1024px) {
+  /* Fold the About page grids (Duality Grid sets the desktop track count) to a
+   * single column so nothing is cramped. The compound selector outranks
+   * `.du_grid`'s own `grid-template-columns`. */
+  .du_grid.atlas-about-views,
+  .du_grid.atlas-about-facts {
+    grid-template-columns: 1fr;
+  }
+
   .atlas-matrix-tile--cell {
     grid-template-columns: 1fr;
     .atlas-matrix-cell__block {

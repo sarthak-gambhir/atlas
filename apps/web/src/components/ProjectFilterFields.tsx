@@ -10,6 +10,8 @@ export interface ProjectFilterFieldsProps {
   onIncludeArchivedChange: (value: boolean) => void;
   favoritesOnly: boolean;
   onFavoritesOnlyChange: (value: boolean) => void;
+  ownedOnly: boolean;
+  onOwnedOnlyChange: (value: boolean) => void;
   isFiltered: boolean;
   onClear: () => void;
 }
@@ -22,12 +24,21 @@ export function ProjectFilterFields({
   onIncludeArchivedChange,
   favoritesOnly,
   onFavoritesOnlyChange,
+  ownedOnly,
+  onOwnedOnlyChange,
   isFiltered,
   onClear,
 }: ProjectFilterFieldsProps) {
   return (
     <Stack gap={3}>
       <QuickFilterBar>
+        <QuickFilterChip
+          icon={ACTION_ICONS.owner}
+          active={ownedOnly}
+          onToggle={() => onOwnedOnlyChange(!ownedOnly)}
+        >
+          My projects
+        </QuickFilterChip>
         <QuickFilterChip
           icon={ACTION_ICONS.favorite}
           active={favoritesOnly}

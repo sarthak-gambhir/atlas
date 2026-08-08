@@ -8,6 +8,7 @@ import {
   Container,
   FormField,
   Heading,
+  Inline,
   Input,
   Stack,
   Text,
@@ -17,7 +18,7 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router';
 
 import { BrandMark } from '../components/BrandMark.tsx';
 import { ApiError } from '../lib/api.ts';
-import { useLogin, useSession } from '../lib/session.ts';
+import { DEMO_CREDENTIALS, useLogin, useSession } from '../lib/session.ts';
 
 interface LocationState {
   from?: string;
@@ -42,6 +43,12 @@ export function LoginPage() {
       { username, password },
       { onSuccess: () => void navigate(destination, { replace: true }) },
     );
+  };
+
+  const handleDemo = () => {
+    login.mutate(DEMO_CREDENTIALS, {
+      onSuccess: () => void navigate(destination, { replace: true }),
+    });
   };
 
   const message =
@@ -90,9 +97,28 @@ export function LoginPage() {
                   />
                 </FormField>
 
-                <Button type="submit" variant="solid" disabled={login.isPending}>
-                  {login.isPending ? 'Signing in...' : 'Sign in'}
-                </Button>
+                <Inline gap={2} justify="between">
+                  <Button
+                    className="atlas-button"
+                    size="md"
+                    type="button"
+                    variant="inverse"
+                    onClick={handleDemo}
+                    disabled={login.isPending}
+                  >
+                    Try the demo
+                  </Button>
+
+                  <Button
+                    className="atlas-button"
+                    size="md"
+                    type="submit"
+                    variant="solid"
+                    disabled={login.isPending}
+                  >
+                    {login.isPending ? 'Signing in...' : 'Sign in'}
+                  </Button>
+                </Inline>
 
                 <Text size="sm">
                   Accounts are created by an admin with the create-user command.

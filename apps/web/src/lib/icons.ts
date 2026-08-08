@@ -86,6 +86,7 @@ export const ACTION_ICONS = {
   addPerson: RiUserAddLine,
   role: RiShieldUserLine,
   makeOwner: RiUserStarLine,
+  owner: RiUserStarLine,
   members: RiGroupLine,
   assignee: RiUserLine,
   favorite: RiStarFill,

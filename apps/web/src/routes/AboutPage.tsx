@@ -1,4 +1,5 @@
 import {
+  Alert,
   Box,
   Button,
   Card,
@@ -20,6 +21,7 @@ import { IconLabel } from '../components/IconLabel.tsx';
 import { PageHeader } from '../components/PageHeader.tsx';
 import { ACTION_ICONS } from '../lib/icons.ts';
 import { PAGE_ICONS } from '../lib/nav.ts';
+import { DEMO_CREDENTIALS, useLogin } from '../lib/session.ts';
 
 interface AboutPageProps {
   /** Rendered inside the app shell (signed in) rather than as the standalone,
@@ -183,6 +185,11 @@ function AboutSections() {
 
 export function AboutPage({ inShell = false }: AboutPageProps) {
   const navigate = useNavigate();
+  const login = useLogin();
+
+  const tryDemo = () => {
+    login.mutate(DEMO_CREDENTIALS, { onSuccess: () => void navigate('/tasks') });
+  };
 
   if (inShell) {
     return (
@@ -233,14 +240,31 @@ export function AboutPage({ inShell = false }: AboutPageProps) {
             <Text align="center" style={{ maxWidth: '100ch' }}>
               {INTRO}
             </Text>
-            <Button
-              className="atlas-button"
-              size="lg"
-              variant="solid"
-              onClick={() => void navigate('/login')}
-            >
-              Sign in
-            </Button>
+            <Inline gap={3} wrap>
+              <Button
+                className="atlas-button"
+                size="lg"
+                variant="solid"
+                onClick={tryDemo}
+                disabled={login.isPending}
+              >
+                {login.isPending ? 'Starting demo...' : 'Try the demo'}
+              </Button>
+              <Button
+                className="atlas-button"
+                size="lg"
+                variant="ghost"
+                onClick={() => void navigate('/login')}
+                disabled={login.isPending}
+              >
+                Sign in
+              </Button>
+            </Inline>
+            {login.isError ? (
+              <Alert tone="error" role="alert">
+                The demo is unavailable right now. Please try signing in.
+              </Alert>
+            ) : null}
           </Stack>
 
           <AboutSections />

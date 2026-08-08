@@ -15,7 +15,12 @@ import { useState, type FormEvent } from 'react';
 
 import { useChangePassword } from '../../lib/admin.ts';
 import { ACTION_ICONS } from '../../lib/icons.ts';
-import { useSession, useSignOutOtherDevices } from '../../lib/session.ts';
+import {
+  isDemoAccount,
+  useLogout,
+  useSession,
+  useSignOutOtherDevices,
+} from '../../lib/session.ts';
 import { IconLabel } from '../IconLabel.tsx';
 import { EditProfileModal } from './EditProfileModal.tsx';
 
@@ -33,6 +38,7 @@ export function AccountPanel() {
 
 function IdentitySection() {
   const { data: user } = useSession();
+  const demo = isDemoAccount(user);
   const [editing, setEditing] = useState(false);
   // Bumping the key remounts the modal so it reopens with the live values.
   const [editKey, setEditKey] = useState(0);
@@ -48,7 +54,9 @@ function IdentitySection() {
         <Heading level={3} visualLevel={5}>
           Profile
         </Heading>
-        <Text size="sm">How you appear across Atlas.</Text>
+        <Text size="sm">
+          {demo ? 'The shared demo profile is read-only.' : 'How you appear across Atlas.'}
+        </Text>
       </Stack>
 
       <Inline gap={3} align="center" justify="between">
@@ -65,12 +73,18 @@ function IdentitySection() {
           </Stack>
         </Inline>
 
-        <Button className="atlas-button" variant="inverse" size="md" onClick={openEditor}>
+        <Button
+          className="atlas-button"
+          variant="inverse"
+          size="md"
+          disabled={demo}
+          onClick={openEditor}
+        >
           <IconLabel icon={ACTION_ICONS.edit}>Edit profile</IconLabel>
         </Button>
       </Inline>
 
-      {user ? (
+      {user && !demo ? (
         <EditProfileModal
           key={editKey}
           user={user}
@@ -83,6 +97,7 @@ function IdentitySection() {
 }
 
 function ChangePasswordSection() {
+  const { data: user } = useSession();
   const change = useChangePassword();
   const { toast } = useToast();
   const [currentPassword, setCurrentPassword] = useState('');
@@ -90,6 +105,24 @@ function ChangePasswordSection() {
   const [confirmation, setConfirmation] = useState('');
 
   const mismatch = confirmation !== '' && confirmation !== newPassword;
+
+  // The shared demo login's password is locked server-side; don't offer a form
+  // that can only fail.
+  if (isDemoAccount(user)) {
+    return (
+      <Stack gap={3}>
+        <Stack gap={1}>
+          <Heading level={3} visualLevel={5}>
+            Change password
+          </Heading>
+          <Text size="sm">
+            This is the shared demo account, so its password is locked. Create your own account to
+            manage a password.
+          </Text>
+        </Stack>
+      </Stack>
+    );
+  }
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -174,7 +207,9 @@ function ChangePasswordSection() {
 }
 
 function SessionsSection() {
+  const { data: user } = useSession();
   const signOutOthers = useSignOutOtherDevices();
+  const logout = useLogout();
   const { toast } = useToast();
 
   const run = () => {
@@ -188,6 +223,38 @@ function SessionsSection() {
         }),
     });
   };
+
+  // The demo login is shared, so signing out "other devices" would sign out
+  // other visitors. Offer a plain sign-out that ends only this session instead.
+  if (isDemoAccount(user)) {
+    return (
+      <Stack gap={3}>
+        <Stack gap={1}>
+          <Heading level={3} visualLevel={5}>
+            Session
+          </Heading>
+          <Text size="sm">
+            This is the shared demo account. Sign out to end your session; other visitors stay
+            signed in.
+          </Text>
+        </Stack>
+
+        <Inline>
+          <Button
+            className="atlas-button"
+            variant="inverse"
+            disabled={logout.isPending}
+            onClick={() => logout.mutate()}
+            size="md"
+          >
+            <IconLabel icon={ACTION_ICONS.signOut}>
+              {logout.isPending ? 'Signing out...' : 'Sign out'}
+            </IconLabel>
+          </Button>
+        </Inline>
+      </Stack>
+    );
+  }
 
   return (
     <Stack gap={3}>

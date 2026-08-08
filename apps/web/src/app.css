@@ -342,16 +342,19 @@ button.atlas-matrix-tile:hover {
   padding: 0 var(--space-2) 0 var(--space-1);
 
   &.du_badge.bucket-badge-next {
-    border-style: double;
-    border-width: 5px;
+    border-style: solid;
   }
 
   &.du_badge.bucket-badge-later {
-    border-style: solid;
+    border-style: dashed;
   }
 
   &.du_badge.bucket-badge-someday {
     border-style: dotted;
+  }
+
+  &.no-label {
+    padding: var(--space-1);
   }
 }
 

@@ -16,6 +16,7 @@
     "dev:server": "node --watch --env-file-if-exists=.env apps/server/src/dev.ts",
     "dev:web": "npm --workspace @atlas/web run dev",
     "create-user": "node --env-file-if-exists=.env apps/server/src/scripts/create-user.ts",
+    "seed-demo": "node --env-file-if-exists=.env apps/server/src/scripts/seed-demo.ts",
     "db:generate": "npm --workspace @atlas/server run db:generate",
     "db:migrate": "npm --workspace @atlas/server run db:migrate",
     "build": "npm --workspace @atlas/web run build",

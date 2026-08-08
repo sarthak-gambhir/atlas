@@ -46,6 +46,7 @@ import { BUCKET_LABELS, CONFIDENCE_LABELS } from '../lib/labels.ts';
 import { PAGE_ICONS } from '../lib/nav.ts';
 import { useSession } from '../lib/session.ts';
 import { useScoringSettings } from '../lib/tasks.ts';
+import { useIsMobile } from '../lib/useIsMobile.ts';
 
 export function SettingsPage() {
   const { data: user } = useSession();
@@ -363,7 +364,7 @@ function ScoreAxis({
 }) {
   const { now, next, later } = thresholds;
   const pct = (value: number) => (Math.min(Math.max(value, 0), max) / max) * 100;
-
+  const isMobile = useIsMobile();
   const bands = [
     { bucket: 'someday' as const, from: 0, to: later },
     { bucket: 'later' as const, from: later, to: next },
@@ -439,7 +440,7 @@ function ScoreAxis({
               gap: 2,
             }}
           >
-            <BucketBadge bucket={band.bucket} />
+            <BucketBadge bucket={band.bucket} showLabel={!isMobile} />
             <span style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
               {band.from}–{band.to}
             </span>

@@ -8,6 +8,7 @@ import {
 import type { FastifyPluginAsync, FastifyReply } from 'fastify';
 
 import { requireAuth } from '../auth/context.ts';
+import { isDemoUsername } from '../auth/demo.ts';
 import { fakeVerify, hashPassword, verifyPassword } from '../auth/password.ts';
 import {
   SESSION_COOKIE,
@@ -122,6 +123,14 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     const { displayName, username } = updateProfileSchema.parse(request.body);
     const me = request.user!;
 
+    // The shared demo login is frozen: no profile edits, so it stays consistent
+    // for the next visitor (and keeps its locked username and password valid).
+    if (isDemoUsername(me.username)) {
+      return reply
+        .code(403)
+        .send({ error: 'demo_locked', message: 'The demo account profile cannot be edited.' });
+    }
+
     // Guard the case-insensitive unique index before touching the row.
     const clash = await findUserByUsername(app.db, username);
     if (clash && clash.id !== me.id) {
@@ -137,7 +146,15 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     return { user: toSessionUser(updated) };
   });
 
-  app.post('/auth/logout-others', { preHandler: requireAuth }, async (request) => {
+  app.post('/auth/logout-others', { preHandler: requireAuth }, async (request, reply) => {
+    // Shared demo account: one visitor must not sign everyone else out.
+    if (isDemoUsername(request.user!.username)) {
+      return reply.code(403).send({
+        error: 'demo_locked',
+        message: 'The demo account cannot sign out other devices.',
+      });
+    }
+
     if (request.sessionToken) {
       await revokeOtherSessionsForUser(app.db, request.user!.id, request.sessionToken);
     }
@@ -147,6 +164,14 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
   app.post('/auth/password', { preHandler: requireAuth }, async (request, reply) => {
     const { currentPassword, newPassword } = changePasswordSchema.parse(request.body);
     const me = request.user!;
+
+    // The demo account is shared: changing its password would lock everyone else out.
+    if (isDemoUsername(me.username)) {
+      return reply.code(403).send({
+        error: 'demo_locked',
+        message: "The demo account's password cannot be changed.",
+      });
+    }
 
     const stored = await findUserByUsername(app.db, me.username);
     if (!stored || !(await verifyPassword(currentPassword, stored.passwordHash))) {

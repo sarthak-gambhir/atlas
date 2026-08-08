@@ -111,6 +111,9 @@ interface TaskFilterToolbarProps {
   /** Tasks page only: the client-side "in favorite projects" quick filter. */
   inFavorites?: boolean;
   onInFavoritesChange?: (value: boolean) => void;
+  /** Tasks page only: the client-side "my projects" (owned) quick filter. */
+  ownedOnly?: boolean;
+  onOwnedOnlyChange?: (value: boolean) => void;
 }
 
 export function TaskFilterToolbar({
@@ -120,13 +123,17 @@ export function TaskFilterToolbar({
   excludeArchived = false,
   inFavorites,
   onInFavoritesChange,
+  ownedOnly,
+  onOwnedOnlyChange,
 }: TaskFilterToolbarProps) {
-  // inFavorites lives outside useFilters, so fold it into the panel's badge.
+  // inFavorites and ownedOnly live outside useFilters, so fold them into the badge.
   const favoriteActive = inFavorites ?? false;
+  const ownedActive = ownedOnly ?? false;
+  const extraActive = (favoriteActive ? 1 : 0) + (ownedActive ? 1 : 0);
   return (
     <FilterToolbar
-      isFiltered={filters.isFiltered || favoriteActive}
-      activeCount={filters.activeCount + (favoriteActive ? 1 : 0)}
+      isFiltered={filters.isFiltered || favoriteActive || ownedActive}
+      activeCount={filters.activeCount + extraActive}
     >
       <TaskFilterFields
         filters={filters}
@@ -135,6 +142,8 @@ export function TaskFilterToolbar({
         excludeArchived={excludeArchived}
         inFavorites={inFavorites}
         onInFavoritesChange={onInFavoritesChange}
+        ownedOnly={ownedOnly}
+        onOwnedOnlyChange={onOwnedOnlyChange}
       />
     </FilterToolbar>
   );
@@ -147,6 +156,8 @@ interface ProjectFilterToolbarProps {
   onIncludeArchivedChange: (value: boolean) => void;
   favoritesOnly: boolean;
   onFavoritesOnlyChange: (value: boolean) => void;
+  ownedOnly: boolean;
+  onOwnedOnlyChange: (value: boolean) => void;
   isFiltered: boolean;
   activeCount: number;
   onClear: () => void;
@@ -159,6 +170,8 @@ export function ProjectFilterToolbar({
   onIncludeArchivedChange,
   favoritesOnly,
   onFavoritesOnlyChange,
+  ownedOnly,
+  onOwnedOnlyChange,
   isFiltered,
   activeCount,
   onClear,
@@ -172,6 +185,8 @@ export function ProjectFilterToolbar({
         onIncludeArchivedChange={onIncludeArchivedChange}
         favoritesOnly={favoritesOnly}
         onFavoritesOnlyChange={onFavoritesOnlyChange}
+        ownedOnly={ownedOnly}
+        onOwnedOnlyChange={onOwnedOnlyChange}
         isFiltered={isFiltered}
         onClear={onClear}
       />

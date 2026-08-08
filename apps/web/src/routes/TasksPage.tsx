@@ -11,6 +11,7 @@ import { ACTION_ICONS } from '../lib/icons.ts';
 import { PAGE_ICONS } from '../lib/nav.ts';
 import { useProjects } from '../lib/organization.ts';
 import { useQuickAdd } from '../lib/quick-add.ts';
+import { useSession } from '../lib/session.ts';
 import { useTasks } from '../lib/tasks.ts';
 import { useBooleanParam } from '../lib/urlState.ts';
 
@@ -18,26 +19,43 @@ export function TasksPage() {
   const filters = useFilters({ includeClosed: true });
   const openQuickAdd = useQuickAdd();
   const { data: projects } = useProjects();
+  const { data: session } = useSession();
   const { data: tasks } = useTasks(filters.query);
   const { search } = useLocation();
 
-  // The "In favorite projects" chip is a client-side project restriction, so it
-  // and the header count both read from the same favorite set.
+  // "Favorite projects" and "My projects" are client-side project restrictions,
+  // so they and the header count read from the same id sets.
   const [inFavorites, setInFavorites] = useBooleanParam('favorites');
+  const [ownedOnly, setOwnedOnly] = useBooleanParam('owned');
   const favoriteProjectIds = useMemo(
     () => (projects ?? []).filter((project) => project.isFavorite).map((project) => project.id),
     [projects],
   );
-  const restrictProjectIds = inFavorites ? favoriteProjectIds : undefined;
+  const ownedProjectIds = useMemo(
+    () =>
+      (projects ?? [])
+        .filter((project) => session != null && project.ownerId === session.id)
+        .map((project) => project.id),
+    [projects, session],
+  );
+
+  // Each active restriction narrows further, so combine them by intersection.
+  const restrictProjectIds = useMemo(() => {
+    const sets: string[][] = [];
+    if (inFavorites) sets.push(favoriteProjectIds);
+    if (ownedOnly) sets.push(ownedProjectIds);
+    if (sets.length === 0) return undefined;
+    return sets.reduce((acc, ids) => acc.filter((id) => ids.includes(id)));
+  }, [inFavorites, ownedOnly, favoriteProjectIds, ownedProjectIds]);
 
   const shownCount = useMemo(() => {
-    if (!inFavorites) return tasks?.length;
-    const allowed = new Set(favoriteProjectIds);
+    if (!restrictProjectIds) return tasks?.length;
+    const allowed = new Set(restrictProjectIds);
     return (tasks ?? []).filter((task) => task.projectId != null && allowed.has(task.projectId))
       .length;
-  }, [tasks, inFavorites, favoriteProjectIds]);
+  }, [tasks, restrictProjectIds]);
 
-  const isFiltered = filters.isFiltered || inFavorites;
+  const isFiltered = filters.isFiltered || inFavorites || ownedOnly;
 
   return (
     <Stack gap={4}>
@@ -51,6 +69,8 @@ export function TasksPage() {
               filters={filters}
               inFavorites={inFavorites}
               onInFavoritesChange={setInFavorites}
+              ownedOnly={ownedOnly}
+              onOwnedOnlyChange={setOwnedOnly}
             />
             <Button
               className="atlas-button"

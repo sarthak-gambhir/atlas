@@ -25,6 +25,9 @@ export interface TaskFilterFieldsProps {
   /** Tasks page only: the client-side "in favorite projects" quick filter. */
   inFavorites?: boolean;
   onInFavoritesChange?: (value: boolean) => void;
+  /** Tasks page only: the client-side "my projects" (owned) quick filter. */
+  ownedOnly?: boolean;
+  onOwnedOnlyChange?: (value: boolean) => void;
 }
 
 /** Task filter controls for a popover or modal panel. */
@@ -35,6 +38,8 @@ export function TaskFilterFields({
   excludeArchived = false,
   inFavorites,
   onInFavoritesChange,
+  ownedOnly,
+  onOwnedOnlyChange,
 }: TaskFilterFieldsProps) {
   const { state, set, clear, isFiltered } = filters;
   const { data: session } = useSession();
@@ -43,13 +48,14 @@ export function TaskFilterFields({
   const { data: tags } = useTags();
   const facets = useFilterFacets(state, excludeArchived);
 
-  // "Assigned to me" and "Favorite projects" are Tasks-page shortcuts; the page
-  // opts in by passing an onInFavoritesChange handler.
-  const showTaskShortcuts = onInFavoritesChange != null;
+  // "Assigned to me", "My projects" and "Favorite projects" are Tasks-page
+  // shortcuts; the page opts in by passing their change handlers.
+  const showTaskShortcuts = onInFavoritesChange != null || onOwnedOnlyChange != null;
   const assignedToMe = session != null && state.assigneeId === session.id;
   const favoriteActive = inFavorites ?? false;
+  const ownedActive = ownedOnly ?? false;
   const showQuickFilters = showClosedToggle || showTaskShortcuts;
-  const showClear = isFiltered || favoriteActive;
+  const showClear = isFiltered || favoriteActive || ownedActive;
 
   return (
     <Stack gap={3}>
@@ -65,7 +71,16 @@ export function TaskFilterFields({
                 Assigned to me
               </QuickFilterChip>
             ) : null}
-            {showTaskShortcuts ? (
+            {onOwnedOnlyChange ? (
+              <QuickFilterChip
+                icon={ACTION_ICONS.owner}
+                active={ownedActive}
+                onToggle={() => onOwnedOnlyChange(!ownedActive)}
+              >
+                My projects
+              </QuickFilterChip>
+            ) : null}
+            {onInFavoritesChange ? (
               <QuickFilterChip
                 icon={ACTION_ICONS.favorite}
                 active={favoriteActive}
@@ -174,6 +189,7 @@ export function TaskFilterFields({
           onClick={() => {
             clear();
             onInFavoritesChange?.(false);
+            onOwnedOnlyChange?.(false);
           }}
         >
           Clear

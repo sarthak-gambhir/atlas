@@ -19,6 +19,7 @@ type FormState = { project?: ProjectDto } | null;
 export function ProjectsPage() {
   const [includeArchived, setIncludeArchived] = useBooleanParam('archived');
   const [favoritesOnly, setFavoritesOnly] = useBooleanParam('favorites');
+  const [ownedOnly, setOwnedOnly] = useBooleanParam('owned');
   const [search, setSearch] = useStringParam('q');
   const [form, setForm] = useState<FormState>(null);
 
@@ -27,14 +28,18 @@ export function ProjectsPage() {
   const isAdmin = session?.role === 'admin';
 
   const trimmedSearch = search.trim();
-  const isFiltered = trimmedSearch !== '' || includeArchived || favoritesOnly;
+  const isFiltered = trimmedSearch !== '' || includeArchived || favoritesOnly || ownedOnly;
   const activeCount =
-    (trimmedSearch ? 1 : 0) + (includeArchived ? 1 : 0) + (favoritesOnly ? 1 : 0);
+    (trimmedSearch ? 1 : 0) +
+    (includeArchived ? 1 : 0) +
+    (favoritesOnly ? 1 : 0) +
+    (ownedOnly ? 1 : 0);
 
   const filtered = useMemo(() => {
     const query = trimmedSearch.toLowerCase();
     const matched = (projects ?? []).filter((project) => {
       if (favoritesOnly && !project.isFavorite) return false;
+      if (ownedOnly && project.ownerId !== session?.id) return false;
       if (query === '') return true;
       return (
         project.name.toLowerCase().includes(query) ||
@@ -46,12 +51,13 @@ export function ProjectsPage() {
       if (a.isFavorite !== b.isFavorite) return a.isFavorite ? -1 : 1;
       return a.name.localeCompare(b.name);
     });
-  }, [projects, trimmedSearch, favoritesOnly]);
+  }, [projects, trimmedSearch, favoritesOnly, ownedOnly, session?.id]);
 
   const clearFilters = () => {
     setSearch('');
     setIncludeArchived(false);
     setFavoritesOnly(false);
+    setOwnedOnly(false);
   };
 
   return (
@@ -69,6 +75,8 @@ export function ProjectsPage() {
               onIncludeArchivedChange={setIncludeArchived}
               favoritesOnly={favoritesOnly}
               onFavoritesOnlyChange={setFavoritesOnly}
+              ownedOnly={ownedOnly}
+              onOwnedOnlyChange={setOwnedOnly}
               isFiltered={isFiltered}
               activeCount={activeCount}
               onClear={clearFilters}

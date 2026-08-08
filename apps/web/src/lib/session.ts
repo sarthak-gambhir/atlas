@@ -5,6 +5,23 @@ import { ApiError, api } from './api.ts';
 
 export const sessionKey = ['session'] as const;
 
+/**
+ * The public demo account seeded by `npm run seed-demo`. Used by the "Try the
+ * demo" buttons to sign a visitor straight in as John Doe.
+ */
+export const DEMO_CREDENTIALS: LoginInput = {
+  username: 'john.doe',
+  password: 'demo-password-123',
+};
+
+/**
+ * True for the shared public demo login. Its username and password are locked
+ * server-side, so the UI hides those controls rather than letting them fail.
+ */
+export function isDemoAccount(user?: Pick<SessionUser, 'username'> | null): boolean {
+  return user?.username.toLowerCase() === DEMO_CREDENTIALS.username.toLowerCase();
+}
+
 /** Resolves to null when signed out, rather than surfacing a 401 as an error. */
 export function useSession(): UseQueryResult<SessionUser | null> {
   return useQuery({

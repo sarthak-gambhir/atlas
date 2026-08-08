@@ -45,7 +45,7 @@ describe('AuditLogPanel', () => {
   it('renders the datatable columns and a filter input', () => {
     render(<AuditLogPanel />);
 
-    for (const header of ['When', 'Action', 'Person', 'Details']) {
+    for (const header of ['When', 'Action', 'Actor', 'Details']) {
       expect(screen.getByRole('columnheader', { name: new RegExp(header) })).toBeInTheDocument();
     }
     expect(screen.getByPlaceholderText('Filter activity...')).toBeInTheDocument();

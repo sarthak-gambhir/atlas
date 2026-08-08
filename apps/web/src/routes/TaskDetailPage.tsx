@@ -9,6 +9,7 @@ import {
   Heading,
   Icon,
   Inline,
+  Spinner,
   Stack,
   Stat,
   StatGroup,
@@ -51,7 +52,12 @@ export function TaskDetailPage() {
       <Stack gap={4}>
         <BackLink fallback={backFallback} />
         {isPending && !error ? (
-          <Text>Loading task...</Text>
+          <Stack align="center" justify="center" gap={3} style={{ minHeight: '40vh' }}>
+            <Spinner size="lg" label="Loading task" />
+            <Heading level={2} visualLevel={4}>
+              Loading task...
+            </Heading>
+          </Stack>
         ) : (
           <EmptyState
             icon={<Icon icon={ACTION_ICONS.warning} size={64} />}

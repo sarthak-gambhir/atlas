@@ -17,6 +17,7 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarTrigger,
+  Spinner,
   Stack,
   Text,
 } from '@astrabound/duality';
@@ -153,6 +154,7 @@ export function AppShell({ children }: AppShellProps) {
             className="atlas-button atlas-account-item"
             variant="ghost"
             size="md"
+            disabled={logout.isPending}
             onClick={() => {
               setAccountOpen(false);
               logout.mutate();
@@ -340,6 +342,27 @@ export function AppShell({ children }: AppShellProps) {
         onClose={() => setPaletteOpen(false)}
         onQuickAdd={openQuickAdd}
       />
+
+      {logout.isPending ? (
+        <Box
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'var(--bg)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Stack gap={4} align="center" justify="center">
+            <Spinner size="lg" label="Signing out" />
+            <Heading level={2} visualLevel={4}>
+              Signing out...
+            </Heading>
+          </Stack>
+        </Box>
+      ) : null}
     </Inline>
   );
 }

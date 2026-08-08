@@ -1,4 +1,14 @@
-import { Alert, Button, EmptyState, Grid, Icon, Inline, Stack } from '@astrabound/duality';
+import {
+  Alert,
+  Button,
+  EmptyState,
+  Grid,
+  Heading,
+  Icon,
+  Inline,
+  Spinner,
+  Stack,
+} from '@astrabound/duality';
 import type { ProjectDto } from '@atlas/shared';
 import { useMemo, useState } from 'react';
 
@@ -92,7 +102,14 @@ export function ProjectsPage() {
 
       {error ? <Alert tone="error">{error.message}</Alert> : null}
 
-      {!isPending && filtered.length === 0 ? (
+      {isPending ? (
+        <Stack align="center" justify="center" gap={3} style={{ minHeight: '40vh' }}>
+          <Spinner size="lg" label="Loading projects" />
+          <Heading level={2} visualLevel={4}>
+            Loading projects...
+          </Heading>
+        </Stack>
+      ) : filtered.length === 0 ? (
         <EmptyState
           icon={
             <Icon icon={trimmedSearch ? ACTION_ICONS.noResults : ACTION_ICONS.project} size={64} />
